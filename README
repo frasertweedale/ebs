@@ -1,0 +1,5 @@
+ebs - evidence based scheduler
+==============================
+
+This program implements "evidence based scheduling" `as described by
+Joel Spolsky <http://www.joelonsoftware.com/items/2007/10/26.html>`_.
