@@ -203,18 +203,15 @@ class AddTask(EBSCommand):
 class Estimate(EBSCommand):
     """Perform an estimation using Monte Carlo simulations."""
     def _run(self):
-        task_hours_per_day = float(conf.get('core', 'task_hours_per_day'))
-        event_hours_per_day = float(conf.get('core', 'event_hours_per_day'))
+        hours_per_day = float(conf.get('core', 'hours_per_day'))
         today = datetime.date.today()
         for e in self._store.estimators():
             future_sums = (sum(ests) for ests in e.simulate_futures())
             future_slice = (itertools.islice(future_sums, 100))
             future_dates = (
                 _date.ship_date(
-                    task_hours=h,
-                    task_hours_per_day=task_hours_per_day,
-                    event_hours=e.future_event_cost,
-                    event_hours_per_day=event_hours_per_day,
+                    hours=h + e.future_event_cost,
+                    hours_per_day=task_hours_per_day,
                     start_date=today
                 )
                 for h in future_slice

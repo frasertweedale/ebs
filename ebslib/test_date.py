@@ -72,15 +72,14 @@ class DateTestCase(unittest.TestCase):
                 _now + datetime.timedelta(days=offsets[_now.weekday()])
             )
 
-    def test_calculate_date_type(self):
-        with self.assertRaisesRegexp(TypeError, r'\btask_hours_per_day\b'):
-            date.ship_date(task_hours=10)
-        with self.assertRaisesRegexp(TypeError, r'\bevent_hours_per_day\b'):
-            date.ship_date(event_hours=10)
-        date.ship_date(task_hours=10, task_hours_per_day=10)
-        date.ship_date(event_hours=10, event_hours_per_day=10)
+    def test_ship_date_type(self):
+        with self.assertRaisesRegexp(TypeError, r'\bhours\b'):
+            date.ship_date(hours_per_day=10)
+        with self.assertRaisesRegexp(TypeError, r'\bhours_per_day\b'):
+            date.ship_date(hours=10)
+        date.ship_date(hours=10, hours_per_day=10)
 
-    def test_calculate_date(self):
+    def test_ship_date(self):
         work_days = frozenset([0, 1, 2, 3, 4])
         for i in range(14):
             _now = _today + datetime.timedelta(days=i)
@@ -93,8 +92,8 @@ class DateTestCase(unittest.TestCase):
             self.assertEqual(
                 date.ship_date(
                     work_days=work_days,
-                    task_hours=3,
-                    task_hours_per_day=1,
+                    hours=3,
+                    hours_per_day=1,
                     start_date=_now
                 ),
                 _now + datetime.timedelta(days=offsets[_now.weekday()])
@@ -110,10 +109,8 @@ class DateTestCase(unittest.TestCase):
             self.assertEqual(
                 date.ship_date(
                     work_days=work_days,
-                    task_hours=55,
-                    task_hours_per_day=7.3,
-                    event_hours=15.2,
-                    event_hours_per_day=7.6,
+                    hours=70.2,
+                    hours_per_day=7.6,
                     start_date=_now
                 ),
                 _now + datetime.timedelta(days=offsets[_now.weekday()])

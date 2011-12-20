@@ -24,21 +24,19 @@ import math
 
 def ship_date(
     work_days=frozenset([0, 1, 2, 3, 4]),
-    task_hours=0,
-    task_hours_per_day=0,
-    event_hours=0,
-    event_hours_per_day=0,
+    hours=0,
+    hours_per_day=0,
     start_date=None
 ):
     """Calculate the projected ship date.
 
-    Given task and event hours, calculate a ship date.
+    Given pending hours, calculate a ship date.
 
     ``work_days``
       The days of the week that count as work days.
       Defaults to 1..5 (Monday to Friday).
-    ``task_hours``
-      The hours of tasks remaining.  Defaults to zero.
+    ``hours``
+      The hours of tasks and events remaining.
     ``task_hours_per_day``
       The number of hours in a day that can be devoted to
       completion of tasks.
@@ -49,21 +47,11 @@ def ship_date(
       events.
     """
     start_date = start_date or datetime.date.today()
-    if task_hours and not task_hours_per_day:
-        raise TypeError(
-            "Argument 'task_hours_per_day' must be supplied when "
-            "'task_hours' is supplied."
-        )
-    if event_hours and not event_hours_per_day:
-        raise TypeError(
-            "Argument 'event_hours_per_day' must be supplied when "
-            "'event_hours' is supplied."
-        )
-    days = 0
-    if task_hours:
-        days += task_hours / task_hours_per_day
-    if event_hours:
-        days += event_hours / event_hours_per_day
+    if not hours:
+        raise TypeError("Argument 'hours' must be supplied.")
+    if not hours_per_day:
+        raise TypeError("Argument 'hours_per_day' must be supplied.")
+    days = hours / hours_per_day
     return apply_work_date_interval(work_days, start_date, days)
 
 
