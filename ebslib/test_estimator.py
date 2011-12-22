@@ -106,6 +106,14 @@ class EstimatorTestCase(unittest.TestCase):
         })
         self.assertItemsEqual(e.velocities(), [1, 2])
 
+    def test_velocities_with_no_estimate(self):
+        """Test exclusion of completed task with no estimate."""
+        e = estimator.Estimator.from_dict({
+            'name': 'Bob',
+            'tasks': [{'actual': 4}, {'estimate': 2, 'actual': 4}]
+        })
+        self.assertListEqual(e.velocities(), [0.5])
+
     def test_velocities_with_max_age(self):
         _30d_ago = _today - datetime.timedelta(days=30)
         _31d_ago = _today - datetime.timedelta(days=31)

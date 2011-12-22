@@ -68,7 +68,8 @@ class Estimator(object):
         return [
             t.estimate / t.actual
             for t in self.completed_tasks()
-            if not (max_age and t.date) or _today - t.date <= abs(max_age)
+            if not (max_age and t.date and _today - t.date > abs(max_age))
+                and t.estimate  # exclude tasks with no estimate
         ]
 
     def simulate_future(self, max_age=None, priority=None):
