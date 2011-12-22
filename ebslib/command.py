@@ -225,6 +225,74 @@ class Estimate(EBSCommand):
                 print '  ' + e.message
 
 
+class Sync(EBSCommand):
+    """Sync task and time from Bugzilla."""
+    def _parse_dict(self, string):
+        # TODO: break out into util module?
+        pairs = string.split(',')
+        items = ((x.strip() for x in pair.split('=')) for pair in pairs)
+        return dict(items)
+
+    def _run(self):
+        sync_conf = dict(conf.items('sync'))
+        _search_args = self._parse_dict(sync_conf['search_args'])
+
+        # import bugzillatools modules
+        import bzlib.bugzilla
+        import bzlib.bug
+
+        kwargs = {x: sync_conf[x] for x in ('url', 'user', 'password')}
+        bz = bzlib.bugzilla.Bugzilla(**kwargs)
+
+        bugs = bzlib.bug.Bug.search(bz, **_search_args)
+        for bug in sorted(bugs, key=lambda x: x.id):
+            self._add_or_update_task(bug)
+
+    def _add_or_update_task(self, bug):
+        if self._store.estimator_exists(bug.data['assigned_to']):
+            if self._store.task_exists(bug.id):
+                self._update_task(bug)
+            else:
+                self._add_task(bug)
+        else:
+            print "SKIP   {} : no estimator for assignee '{}'.".format(
+                bug.id, bug.data['assigned_to'])
+
+    def _add_task(self, bug):
+        task = _task.Task(**dict(self._extract_task_data(bug)))
+        self._store.get_estimator(bug.data['assigned_to']).tasks.append(task)
+        print "ADD    {} : add task: {}".format(bug.id, bug.data['summary'])
+
+    def _update_task(self, bug):
+        old_estimator, task = self._store.get_task(bug.id)
+        estimator = self._store.get_estimator(bug.data['assigned_to'])
+        if old_estimator != estimator:
+            # move task to new estimator
+            old_estimator.tasks.remove(task)
+            estimator.tasks.add(task)
+            print "MOVE   {} : reassigned from '{}' to '{}'.".format(
+                old_estimator.name, estimator.name)
+        diff = False
+        for k, v in self._extract_task_data(bug):
+            oldv = getattr(task, k)
+            if oldv != v:
+                diff = True
+                print "UPDATE {} : {}: {} -> {}".format(bug.id, k, oldv, newv)
+                setattr(task, k, v)
+        if not diff:
+            print "NODIFF {} : task unchanged.".format(bug.id)
+
+
+    def _extract_task_data(self, bug):
+        """Generate pairs of task data extracted from the bug."""
+        yield 'id', bug.id
+        yield 'description', bug.data['summary']
+        yield 'estimate', bug.data['estimated_time']
+        yield 'actual', 0 if bug.is_open() else bug.actual_time(),
+        # TODO: extract date of estimate from history
+        # TODO: extract priority
+
+
 # the list got too long; metaprogram it ^_^
 commands = filter(
     lambda x: type(x) == type                # is a class \

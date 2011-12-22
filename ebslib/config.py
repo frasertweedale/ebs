@@ -19,19 +19,12 @@ import os.path
 import re
 
 
-show_fields = [
-    'alias', 'assigned_to', 'blocks', 'cc', 'creator', 'depends_on',
-    'keywords', 'priority', 'component', 'resolution', 'status',
-    'summary',
-]
-
-
 class ConfigError(Exception):
     pass
 
 
 def check_section(section):
-    if section in ['core', 'alias'] \
+    if section in ['core', 'alias', 'sync'] \
             or re.match(r'server\.\w+', section):
         return section
     raise ConfigError('invalid section: {}'.format(section))
