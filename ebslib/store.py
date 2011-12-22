@@ -124,7 +124,7 @@ class Store(object):
         Return an ``(estimator, task)`` pair.
         """
         self.assert_task_exist(id)
-        return [(e, t) for e, t in self.tasks() if t.id == id]
+        return [(e, t) for e, t in self.tasks() if t.id == id][0]
 
     def task_exists(self, id):
         """Return whether the task of the given id exists in the data store."""

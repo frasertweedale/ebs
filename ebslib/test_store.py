@@ -16,8 +16,10 @@
 
 import datetime
 import tempfile
+import os
 import unittest
 
+from . import task
 from . import estimator
 from . import store
 
@@ -26,7 +28,7 @@ _data = [
     {
         'name': 'Bob',
         'tasks': [
-            {'estimate': 4, 'description': 'Task 3'},
+            {'id': 1, 'estimate': 4, 'description': 'Task 3'},
             {'estimate': 2, 'actual': 3, 'description': 'Task 4'},
         ],
         'events': [
@@ -44,9 +46,31 @@ _data = [
 
 
 class StoreTestCase(unittest.TestCase):
+    def setUp(self):
+        data = [estimator.Estimator.from_dict(e) for e in _data]
+        fd, path = tempfile.mkstemp()
+        os.close(fd)
+        with open(path, 'w') as fp:
+            store.write(fp, data)
+        self._tmp = path
+        self._store = store.Store(path)
+
+    def tearDown(self):
+        del self._store
+        os.unlink(self._tmp)
+        del self._tmp
+
     def test_write_and_read(self):
+        """Verify that data is written out and read back correctly."""
         data = [estimator.Estimator.from_dict(e) for e in _data]
         with tempfile.TemporaryFile() as fp:
             store.write(fp, data)
             fp.seek(0)
             self.assertEqual(data, store.read(fp))
+
+    def test_get_task(self):
+        _estimator, _task = self._store.get_task(1)
+        self.assertEqual(
+            _task,
+            task.Task(**{'id': 1, 'estimate': 4, 'description': 'Task 3'})
+        )
