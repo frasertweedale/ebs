@@ -24,8 +24,8 @@ import math
 
 def ship_date(
     work_days=frozenset([0, 1, 2, 3, 4]),
-    hours=0,
-    hours_per_day=0,
+    hours=None,
+    hours_per_day=None,
     start_date=None
 ):
     """Calculate the projected ship date.
@@ -37,20 +37,17 @@ def ship_date(
       Defaults to 1..5 (Monday to Friday).
     ``hours``
       The hours of tasks and events remaining.
-    ``task_hours_per_day``
+    ``hours_per_day``
       The number of hours in a day that can be devoted to
-      completion of tasks.
-    ``event_hours``
-      The hours of events remaining.  Defaults to zero.
-    ``event_hours_per_day``
-      The number of hours in a day that can be devoted to
-      events.
+      completion of tasks and events.
     """
     start_date = start_date or datetime.date.today()
-    if not hours:
+    if hours is None:
         raise TypeError("Argument 'hours' must be supplied.")
-    if not hours_per_day:
+    if hours_per_day is None:
         raise TypeError("Argument 'hours_per_day' must be supplied.")
+    if hours_per_day <= 0:
+        raise ValueError("Argument 'hours_per_day' must be greater than zero.")
     days = hours / hours_per_day
     return apply_work_date_interval(work_days, start_date, days)
 

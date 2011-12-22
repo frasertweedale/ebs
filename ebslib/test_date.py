@@ -77,7 +77,11 @@ class DateTestCase(unittest.TestCase):
             date.ship_date(hours_per_day=10)
         with self.assertRaisesRegexp(TypeError, r'\bhours_per_day\b'):
             date.ship_date(hours=10)
-        date.ship_date(hours=10, hours_per_day=10)
+        with self.assertRaisesRegexp(ValueError, r'\bhours_per_day\b'):
+            date.ship_date(hours=10, hours_per_day=0)
+        with self.assertRaisesRegexp(ValueError, r'\bhours_per_day\b'):
+            date.ship_date(hours=10, hours_per_day=-1)
+        date.ship_date(hours=10, hours_per_day=1)
 
     def test_ship_date(self):
         work_days = frozenset([0, 1, 2, 3, 4])

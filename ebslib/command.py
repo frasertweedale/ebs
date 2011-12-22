@@ -211,7 +211,7 @@ class Estimate(EBSCommand):
             future_dates = (
                 _date.ship_date(
                     hours=h + e.future_event_cost,
-                    hours_per_day=task_hours_per_day,
+                    hours_per_day=hours_per_day,
                     start_date=today
                 )
                 for h in future_slice
