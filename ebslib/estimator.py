@@ -22,6 +22,10 @@ import random
 from . import task
 
 
+class NoHistoryError(Exception):
+    """The estimator has no useful estimation history."""
+
+
 class Estimator(object):
     """An estimator."""
 
@@ -45,6 +49,14 @@ class Estimator(object):
         self.tasks = tasks
         self.events = events
 
+    def completed_tasks(self):
+        """Generate completed tasks."""
+        return (t for t in self.tasks if t.completed)
+
+    def pending_tasks(self):
+        """Generate incomplete tasks."""
+        return (t for t in self.tasks if not t.completed)
+
     def velocities(self, max_age=None):
         """Return the estimator's velocities.
 
@@ -55,11 +67,8 @@ class Estimator(object):
         _today = datetime.date.today()
         return [
             t.estimate / t.actual
-            for t in self.tasks
-            if t.completed and (
-                not (max_age and t.date)
-                or _today - t.date <= abs(max_age)
-            )
+            for t in self.completed_tasks()
+            if not (max_age and t.date) or _today - t.date <= abs(max_age)
         ]
 
     def simulate_future(self, max_age=None, priority=None):
@@ -77,11 +86,17 @@ class Estimator(object):
           priority will be omitted from the simulation.
         """
         velocities = self.velocities(max_age)
-        return [
-            t.estimate / random.choice(velocities)
-            for t in self.tasks
-            if not t.completed and not (t.priority and t.priority > priority)
-        ]
+        try:
+            return [
+                t.estimate / random.choice(velocities)
+                for t in self.pending_tasks()
+                if not (t.priority and t.priority > priority)
+            ]
+        except IndexError:
+            raise NoHistoryError(
+                "Estimator '{}' has no useful estimation history."
+                .format(self.name)
+            )
 
     def simulate_futures(self, max_age=None):
         """Generate simulated outcomes."""

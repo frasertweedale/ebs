@@ -216,10 +216,13 @@ class Estimate(EBSCommand):
                 )
                 for h in future_slice
             )
-            sorted_futures = sorted(future_dates)
             print e.name
-            for i in range(9, 100, 10):
-                print '  {:2}% : {}'.format(i, sorted_futures[i])
+            try:
+                sorted_futures = sorted(future_dates)
+                for i in range(9, 100, 10):
+                    print '  {:2}% : {}'.format(i, sorted_futures[i])
+            except _estimator.NoHistoryError as e:
+                print '  ' + e.message
 
 
 # the list got too long; metaprogram it ^_^

@@ -215,6 +215,15 @@ class EstimatorTestCase(unittest.TestCase):
             encountered_futures.add(future)
         self.assertSetEqual(possible_futures, encountered_futures)
 
+    def test_simulate_future_with_no_history(self):
+        """Attempt to simulate the future of an estimator with no past."""
+        e = estimator.Estimator.from_dict({
+            'name': 'Bob',
+            'tasks': [{'estimate': 8}, {'estimate': 1}]
+        })
+        with self.assertRaises(estimator.NoHistoryError):
+            e.simulate_future()
+
     def test_future_events(self):
         e = estimator.Estimator.from_dict({
             'name': 'Bob',
