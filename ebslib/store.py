@@ -88,18 +88,18 @@ class Store(object):
     def __exit__(self, exc_type, exc_value, exc_tb):
         self.flush()
 
+    @property
     def estimators(self):
-        """Yield estimators from the data store."""
-        return (e for e in self.data)
+        return self.data
 
     def get_estimator(self, name):
         """Get an estimator by name."""
         self.assert_estimator_exist(name)
-        return [e for e in self.estimators() if e.name == name][0]
+        return [e for e in self.estimators if e.name == name][0]
 
     def estimator_exists(self, name):
         """Return whether the named estimator exists in the data store."""
-        return any(e.name == name for e in self.estimators())
+        return any(e.name == name for e in self.estimators)
 
     def assert_estimator_exist(self, name):
         if not self.estimator_exists(name):
@@ -114,7 +114,7 @@ class Store(object):
 
         Tasks are yielded as ``(estimator, task)`` pairs.
         """
-        for estimator in self.estimators():
+        for estimator in self.estimators:
             for task in estimator.tasks:
                 yield estimator, task
 

@@ -238,7 +238,7 @@ class Estimate(EBSCommand):
         hpd = float(conf.get('core', 'hours_per_day'))
         today = datetime.date.today()
         tomorrow = today + datetime.timedelta(days=1)
-        for e in self._store.estimators():
+        for e in self._store.estimators:
             future_sums = (sum(ests) for ests in e.simulate_futures())
             future_slice = (itertools.islice(future_sums, 10 ** exp))
             future_dates = (
@@ -267,7 +267,7 @@ class Estimate(EBSCommand):
 class LsEvent(EBSCommand):
     """List events by estimator."""
     def _run(self):
-        for e in self._store.estimators():
+        for e in self._store.estimators:
             print e.name
             events = e.get_events(start=datetime.date.today())
             n = 0
@@ -286,7 +286,7 @@ class LsEvent(EBSCommand):
 class Stats(EBSCommand):
     """Calculate velocity statistics for each estimator."""
     def _run(self):
-        for e in self._store.estimators():
+        for e in self._store.estimators:
             print e.name
             print (
                 '  n: {}, min: {:.2}, max: {:.2}, mean: {:.2}, stddev: {:.2}'
