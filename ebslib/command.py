@@ -264,6 +264,25 @@ class Estimate(EBSCommand):
                 print '  ' + e.message
 
 
+class LsEvent(EBSCommand):
+    """List events by estimator."""
+    def _run(self):
+        for e in self._store.estimators():
+            print e.name
+            events = e.get_events(start=datetime.date.today())
+            n = 0
+            for event in sorted(events, key=lambda x: x.date):
+                n += 1
+                print '  {} {:4.2}h {}'.format(
+                    event.date,
+                    event.cost,
+                    '({})'.format(event.description) if event.description \
+                        else ''
+                )
+            if not n:
+                print '  No events'
+
+
 class Stats(EBSCommand):
     """Calculate velocity statistics for each estimator."""
     def _run(self):
