@@ -1,5 +1,5 @@
 # This file is part of ebs
-# Copyright (C) 2011 Fraser Tweedale
+# Copyright (C) 2011 Fraser Tweedale, Benon Technologies Pty Ltd
 #
 # ebs is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,7 +24,8 @@ from . import estimator
 from . import store
 
 
-_data = [
+_estimators = [
+    estimator.Estimator.from_dict(e) for e in
     {
         'name': 'Bob',
         'tasks': [
@@ -43,15 +44,16 @@ _data = [
         ],
     },
 ]
+_holidays = [datetime.date(2012, 1, 1)]
+_data = {'estimators': _estimators, 'holidays': _holidays}
 
 
 class StoreTestCase(unittest.TestCase):
     def setUp(self):
-        data = [estimator.Estimator.from_dict(e) for e in _data]
         fd, path = tempfile.mkstemp()
         os.close(fd)
         with open(path, 'w') as fp:
-            store.write(fp, data)
+            store.write(fp, _data)
         self._tmp = path
         self._store = store.Store(path)
 
@@ -62,15 +64,21 @@ class StoreTestCase(unittest.TestCase):
 
     def test_write_and_read(self):
         """Verify that data is written out and read back correctly."""
-        data = [estimator.Estimator.from_dict(e) for e in _data]
         with tempfile.TemporaryFile() as fp:
-            store.write(fp, data)
+            store.write(fp, _data)
             fp.seek(0)
-            self.assertEqual(data, store.read(fp))
+            self.assertEqual(_data, store.read(fp))
 
     def test_get_task(self):
         _estimator, _task = self._store.get_task(1)
         self.assertEqual(
             _task,
             task.Task(**{'id': 1, 'estimate': 4, 'description': 'Task 3'})
+        )
+        self.assertEqual(_estimator.name, 'Bob')
+
+    def test_get_holidays(self):
+        self.assertEqual(
+            self._store.holidays,
+            _holidays
         )

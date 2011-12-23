@@ -1,5 +1,5 @@
 # This file is part of ebs
-# Copyright (C) 2011 Fraser Tweedale
+# Copyright (C) 2011 Fraser Tweedale, Benon Technologies Pty Ltd
 #
 # ebs is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,6 +30,9 @@ def _serialise(obj):
 def _object_hook(dict):
     if '__date__' in dict:
         return datetime.date(*dict['ymd'])
+    if 'estimators' in dict:
+        dict['estimators'] = \
+            [estimator.Estimator.from_dict(x) for x in dict['estimators']]
     return dict
 
 
@@ -40,10 +43,7 @@ def write(fp, data):
 
 def read(fp):
     """Read data from the given file."""
-    return [
-        estimator.Estimator.from_dict(x)
-        for x in json.load(fp, object_hook=_object_hook)
-    ]
+    return json.load(fp, object_hook=_object_hook)
 
 
 class Store(object):
@@ -90,7 +90,13 @@ class Store(object):
 
     @property
     def estimators(self):
-        return self.data
+        """Return the estimators in this store as a sequence."""
+        return self.data['estimators']
+
+    @property
+    def holidays(self):
+        """Return the holidays in this store as a sequence."""
+        return self.data['holidays']
 
     def get_estimator(self, name):
         """Get an estimator by name."""
