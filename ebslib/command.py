@@ -225,6 +225,23 @@ class Estimate(EBSCommand):
                 print '  ' + e.message
 
 
+class Stats(EBSCommand):
+    """Calculate velocity statistics for each estimator."""
+    def _run(self):
+        for e in self._store.estimators():
+            print e.name
+            print (
+                '  n: {}, min: {:.2}, max: {:.2}, mean: {:.2}, stddev: {:.2}'
+                .format(
+                    len(e.velocities()),
+                    e.min_velocity(),
+                    e.max_velocity(),
+                    e.mean_velocity(),
+                    e.stddev_velocity()
+                )
+            )
+
+
 class Sync(EBSCommand):
     """Sync task and time from Bugzilla."""
     def _parse_dict(self, string):

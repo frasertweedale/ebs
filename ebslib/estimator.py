@@ -17,6 +17,7 @@
 from __future__ import division
 
 import datetime
+import math
 import random
 
 from . import task
@@ -63,6 +64,8 @@ class Estimator(object):
         ``max_age``
           Optional ``datetime.timedelta`` to limit the velocities
           to a maximum age.
+
+        Return a sequence of velocities.
         """
         _today = datetime.date.today()
         return [
@@ -71,6 +74,22 @@ class Estimator(object):
             if not (max_age and t.date and _today - t.date > abs(max_age))
                 and t.estimate  # exclude tasks with no estimate
         ]
+
+    def min_velocity(self, max_age=None):
+        return min(self.velocities(max_age))
+
+    def max_velocity(self, max_age=None):
+        return max(self.velocities(max_age))
+
+    def mean_velocity(self, max_age=None):
+        velocities = self.velocities(max_age)
+        return sum(velocities) / len(velocities)
+
+    def stddev_velocity(self, max_age=None):
+        velocities = self.velocities(max_age)
+        N = len(velocities)
+        mu = self.mean_velocity()
+        return math.sqrt(sum((x - mu) ** 2 for x in velocities) / N)
 
     def simulate_future(self, max_age=None, priority=None):
         """Simulate the future once.
