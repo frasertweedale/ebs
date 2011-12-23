@@ -283,6 +283,20 @@ class LsEvent(EBSCommand):
                 print '  No events'
 
 
+class RmEstimator(EBSCommand):
+    """Remove an estimator."""
+
+    args = EBSCommand.args + [
+        lambda x: x.add_argument('--name', required=True,
+            help='name of the estimator to remove'),
+    ]
+
+    def _run(self):
+        estimator = self._store.get_estimator(self._args.name)
+        self._store.estimators.remove(estimator)
+        print "Removed estimator '{}'.".format(estimator.name)
+
+
 class Stats(EBSCommand):
     """Calculate velocity statistics for each estimator."""
     def _run(self):
