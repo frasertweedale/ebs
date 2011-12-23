@@ -18,6 +18,7 @@ import datetime
 import unittest
 
 from . import date
+from . import task
 
 _today = datetime.date.today()
 
@@ -89,10 +90,6 @@ class DateTestCase(unittest.TestCase):
             _now = _today + datetime.timedelta(days=i)
             # offsets for each day for an interval of 3
             offsets = [3, 3, 5, 5, 5, 4, 3]
-            if _now.weekday() == 5:
-                offset = 2
-            elif _now.weekday() == 6:
-                offset = 1
             self.assertEqual(
                 date.ship_date(
                     work_days=work_days,
@@ -100,16 +97,12 @@ class DateTestCase(unittest.TestCase):
                     hours_per_day=1,
                     start_date=_now
                 ),
-                _now + datetime.timedelta(days=offsets[_now.weekday()])
+                (_now + datetime.timedelta(days=offsets[_now.weekday()]), 0)
             )
         for i in range(14):
             _now = _today + datetime.timedelta(days=i)
             # offsets for each day for an interval of 9.5
             offsets = [14, 14, 14, 14, 14, 13, 12]
-            if _now.weekday() == 5:
-                offset = 2
-            elif _now.weekday() == 6:
-                offset = 1
             self.assertEqual(
                 date.ship_date(
                     work_days=work_days,
@@ -117,5 +110,58 @@ class DateTestCase(unittest.TestCase):
                     hours_per_day=7.6,
                     start_date=_now
                 ),
-                _now + datetime.timedelta(days=offsets[_now.weekday()])
+                (_now + datetime.timedelta(days=offsets[_now.weekday()]), 5.8)
+            )
+
+    def test_ship_date_with_zero_hours(self):
+        work_days = frozenset([0, 1, 2, 3, 4])
+        self.assertEqual(
+            date.ship_date(
+                work_days=work_days,
+                hours=0,
+                hours_per_day=1,
+                start_date=_today
+            ),
+            (_today, 0)
+        )
+
+    def test_ship_date_with_negative_hours(self):
+        work_days = frozenset([0, 1, 2, 3, 4])
+        for hours in -0.1, -0.9, -1, -1.1:
+            self.assertEqual(
+                date.ship_date(
+                    work_days=work_days,
+                    hours=hours,
+                    hours_per_day=1,
+                    start_date=_today
+                ),
+                (_today, 0)
+            )
+
+    def test_ship_date_with_events(self):
+        work_days = frozenset([0, 1, 2, 3, 4])
+
+        def event_in_n_work_days(start, n):
+            return task.Event(
+                date=date.apply_work_date_interval(work_days, start, n),
+                cost=1
+            )
+        for i in range(14):
+            _now = _today + datetime.timedelta(days=i)
+            events = [
+                event_in_n_work_days(_now, 1),
+                event_in_n_work_days(_now, 2),
+                event_in_n_work_days(_now, 10),  # far away; should be excluded
+            ]
+            offsets = [3, 3, 5, 5, 5, 4, 3]
+            # offsets for each day for an interval of 3
+            self.assertEqual(
+                date.ship_date(
+                    work_days=work_days,
+                    hours=1,
+                    events=events,
+                    hours_per_day=1,
+                    start_date=_now,
+                ),
+                (_now + datetime.timedelta(days=offsets[_now.weekday()]), 0)
             )

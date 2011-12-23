@@ -186,6 +186,9 @@ class AddEvent(EBSCommand):
     _attrs = ('date', 'cost', 'description')
 
     def _run(self):
+        hpd = float(conf.get('core', 'hours_per_day'))
+        if self._args.cost > hpd:
+            raise UserWarning('Event cannot have cost greater than one day.')
         self._store.assert_estimator_exist(self._args.estimator)
         event = _task.Event(
             **{attr: getattr(self._args, attr) for attr in self._attrs})
@@ -224,25 +227,39 @@ class AddTask(EBSCommand):
 
 class Estimate(EBSCommand):
     """Perform an estimation using Monte Carlo simulations."""
+    args = EBSCommand.args + [
+        lambda x: x.add_argument('--exponent', metavar='N', type=int,
+            default=2,
+            help='Perform 10^N rounds of simulation (n >=2)'),
+    ]
+
     def _run(self):
-        hours_per_day = float(conf.get('core', 'hours_per_day'))
+        exp = self._args.exponent if self._args.exponent >= 2 else 2
+        hpd = float(conf.get('core', 'hours_per_day'))
         today = datetime.date.today()
+        tomorrow = today + datetime.timedelta(days=1)
         for e in self._store.estimators():
             future_sums = (sum(ests) for ests in e.simulate_futures())
-            future_slice = (itertools.islice(future_sums, 100))
+            future_slice = (itertools.islice(future_sums, 10 ** exp))
             future_dates = (
                 _date.ship_date(
-                    hours=h + e.future_event_cost,
-                    hours_per_day=hours_per_day,
-                    start_date=today
+                    hours=h, hours_per_day=hpd, start_date=today,
+                    events=list(e.get_events(start=tomorrow))
                 )
                 for h in future_slice
             )
             print e.name
             try:
-                sorted_futures = sorted(future_dates)
-                for i in range(9, 100, 10):
-                    print '  {:2}% : {}'.format(i, sorted_futures[i])
+                sorted_futures = \
+                    sorted(future_dates, key=lambda x: (x[0], -x[1]))
+                for i in xrange(
+                    10 ** (exp - 1) - 1,
+                    10 ** exp,
+                    10 ** (exp - 1)
+                ):
+                    print '  {:2}% : {}'.format(
+                        (i + 1) / 10 ** (exp - 2) - 1, sorted_futures[i][0]
+                    )
             except _estimator.NoHistoryError as e:
                 print '  ' + e.message
 
@@ -320,7 +337,6 @@ class Sync(EBSCommand):
                 setattr(task, k, v)
         if not diff:
             print "NODIFF {} : task unchanged.".format(bug.id)
-
 
     def _extract_task_data(self, bug):
         """Generate pairs of task data extracted from the bug."""

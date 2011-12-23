@@ -1,5 +1,5 @@
 # This file is part of ebs
-# Copyright (C) 2011 Fraser Tweedale
+# Copyright (C) 2011 Fraser Tweedale, Benon Technologies Pty Ltd
 #
 # ebs is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -123,15 +123,17 @@ class Estimator(object):
         while True:
             yield self.simulate_future(max_age)
 
-    @property
-    def future_events(self):
-        """Return this estimator's future events."""
-        return [x for x in self.events if not x.completed]
+    def get_events(self, start=None, stop=None):
+        """Generate the estimators events, optionally filtered by date.
 
-    @property
-    def future_event_cost(self):
-        """Calculate the total cost of future events."""
-        return sum(e.cost for e in self.future_events)
+        Return a generator of events.  If start is given, return events
+        occuring on or after the given date.  If stop is given, return
+        events occuring before the given date.
+        """
+        return (
+            e for e in self.events
+            if (not start or e.date >= start) and (not stop or e.date < stop)
+        )
 
     def __eq__(self, other):
         return type(self) == type(other) and all(

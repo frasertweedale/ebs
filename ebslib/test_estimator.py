@@ -1,5 +1,5 @@
 # This file is part of ebs
-# Copyright (C) 2011 Fraser Tweedale
+# Copyright (C) 2011 Fraser Tweedale, Benon Technologies Pty Ltd
 #
 # ebs is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -232,27 +232,29 @@ class EstimatorTestCase(unittest.TestCase):
         with self.assertRaises(estimator.NoHistoryError):
             e.simulate_future()
 
-    def test_future_events(self):
+    def test_get_events(self):
         e = estimator.Estimator.from_dict({
             'name': 'Bob',
             'events': [
-                {'date': _today,  'cost': 1},
-                {'date': _tomorrow,  'cost': 3},
-                {'date': _yesterday, 'cost': 5},
-            ]
-        })
-        self.assertListEqual(sorted(e.future_events), sorted([
-            task.Event(date=_today, cost=1),
-            task.Event(date=_tomorrow, cost=3)
-        ]))
-
-    def test_future_event_cost(self):
-        e = estimator.Estimator.from_dict({
-            'name': 'Bob',
-            'events': [
-                {'date': _today,  'cost': 1},
+                {'date': _yesterday, 'cost': 1},
                 {'date': _today,  'cost': 3},
-                {'date': _yesterday, 'cost': 5},
+                {'date': _tomorrow,  'cost': 5},
             ]
         })
-        self.assertEqual(e.future_event_cost, 4)
+        self.assertEqual(sorted(e.get_events()), sorted([
+            task.Event(date=_yesterday, cost=1),
+            task.Event(date=_today, cost=3),
+            task.Event(date=_tomorrow, cost=5)
+        ]))
+        self.assertEqual(sorted(e.get_events(start=_today)), sorted([
+            task.Event(date=_today, cost=3),
+            task.Event(date=_tomorrow, cost=5)
+        ]))
+        self.assertEqual(sorted(e.get_events(stop=_tomorrow)), sorted([
+            task.Event(date=_yesterday, cost=1),
+            task.Event(date=_today, cost=3),
+        ]))
+        self.assertEqual(sorted(e.get_events(start=_today, stop=_tomorrow)),
+            sorted([task.Event(date=_today, cost=3)]))
+        self.assertEqual(sorted(e.get_events(start=_today, stop=_today)),
+            sorted([]))
