@@ -170,6 +170,28 @@ class AddEstimator(EBSCommand):
         self._store.data.append(_estimator.Estimator(name=self._args.name))
 
 
+class AddEvent(EBSCommand):
+    """Add an event."""
+    args = EBSCommand.args + [
+        lambda x: x.add_argument('--estimator', metavar='NAME', required=True,
+            help='Estimator occupied by the event.'),
+        lambda x: x.add_argument('--date', required=True, type=date,
+            help='Date of the event.'),
+        lambda x: x.add_argument('--cost', metavar='HOURS',
+            type=float, required=True,
+            help='Cost of the event.'),
+        lambda x: x.add_argument('--description', metavar='DESC',
+            help='Description of task.'),
+    ]
+    _attrs = ('date', 'cost', 'description')
+
+    def _run(self):
+        self._store.assert_estimator_exist(self._args.estimator)
+        event = _task.Event(
+            **{attr: getattr(self._args, attr) for attr in self._attrs})
+        self._store.get_estimator(self._args.estimator).events.append(event)
+
+
 class AddTask(EBSCommand):
     """Add a task."""
     args = EBSCommand.args + [
@@ -181,10 +203,10 @@ class AddTask(EBSCommand):
             help='Description of task.'),
         lambda x: x.add_argument('--priority', type=int,
             help='Priority of the task.'),
-        lambda x: x.add_argument('--estimate', metavar='COST',
+        lambda x: x.add_argument('--estimate', metavar='HOURS',
             type=float, required=True,
             help='Estimated cost of the task.'),
-        lambda x: x.add_argument('--actual', metavar='COST',
+        lambda x: x.add_argument('--actual', metavar='HOURS',
             type=float, default=0,
             help='Actual cost of the task.'),
         lambda x: x.add_argument('--date', type=date,
