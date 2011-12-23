@@ -277,7 +277,7 @@ class Sync(EBSCommand):
             oldv = getattr(task, k)
             if oldv != v:
                 diff = True
-                print "UPDATE {} : {}: {} -> {}".format(bug.id, k, oldv, newv)
+                print "UPDATE {} : {}: {} -> {}".format(bug.id, k, oldv, v)
                 setattr(task, k, v)
         if not diff:
             print "NODIFF {} : task unchanged.".format(bug.id)
