@@ -26,11 +26,13 @@ _today = datetime.date.today()
 class DateTestCase(unittest.TestCase):
     def test_work_date_ceil_with_empty_work_days(self):
         with self.assertRaisesRegexp(ValueError, r'\bwork_days\b'):
-            date.work_date_ceil([], _today)
+            date.work_date_ceil(_today)
+        with self.assertRaisesRegexp(ValueError, r'\bwork_days\b'):
+            date.work_date_ceil(_today, ())
 
     def test_work_date_ceil_with_bogus_work_days(self):
         with self.assertRaisesRegexp(ValueError, r'\bwork_days\b'):
-            date.work_date_ceil(['a', 'b', 'c'], _today)
+            date.work_date_ceil(_today, ['a', 'b', 'c'])
 
     def test_work_date_ceil(self):
         work_days = frozenset([0, 1, 2, 3, 4])
@@ -42,7 +44,43 @@ class DateTestCase(unittest.TestCase):
             elif _now.weekday() == 6:
                 offset = 1
             self.assertEqual(
-                date.work_date_ceil(work_days, _now),
+                date.work_date_ceil(_now, work_days),
+                _today + datetime.timedelta(days=offset + i)
+            )
+
+    def test_work_date_ceil_with_holidays(self):
+        work_days = frozenset([0, 1, 2, 3, 4])
+        for i in range(14):
+            _now = _today + datetime.timedelta(days=i)
+            holidays = [date.work_date_ceil(_now, work_days)]
+            offset = 1
+            if _now.weekday() == 4:
+                offset = 3
+            if _now.weekday() == 5:
+                offset = 3
+            elif _now.weekday() == 6:
+                offset = 2
+            self.assertEqual(
+                date.work_date_ceil(_now, work_days, holidays),
+                _today + datetime.timedelta(days=offset + i)
+            )
+        for i in range(14):
+            _now = _today + datetime.timedelta(days=i)
+            _hol1 = date.work_date_ceil(_now, work_days)
+            _hol2 = date.work_date_ceil(
+                _hol1 + datetime.timedelta(days=1), work_days)
+            holidays = [_hol1, _hol2]
+            offset = 2
+            if _now.weekday() == 3:
+                offset = 4
+            if _now.weekday() == 4:
+                offset = 4
+            if _now.weekday() == 5:
+                offset = 4
+            elif _now.weekday() == 6:
+                offset = 3
+            self.assertEqual(
+                date.work_date_ceil(_now, work_days, holidays),
                 _today + datetime.timedelta(days=offset + i)
             )
 
@@ -52,10 +90,6 @@ class DateTestCase(unittest.TestCase):
             _now = _today + datetime.timedelta(days=i)
             # offsets for each day for an interval of 3
             offsets = [3, 3, 5, 5, 5, 4, 3]
-            if _now.weekday() == 5:
-                offset = 2
-            elif _now.weekday() == 6:
-                offset = 1
             self.assertEqual(
                 date.apply_work_date_interval(work_days, _now, 3),
                 _now + datetime.timedelta(days=offsets[_now.weekday()])
@@ -64,12 +98,22 @@ class DateTestCase(unittest.TestCase):
             _now = _today + datetime.timedelta(days=i)
             # offsets for each day for an interval of 9.5
             offsets = [14, 14, 14, 14, 14, 13, 12]
-            if _now.weekday() == 5:
-                offset = 2
-            elif _now.weekday() == 6:
-                offset = 1
             self.assertEqual(
                 date.apply_work_date_interval(work_days, _now, 9.5),
+                _now + datetime.timedelta(days=offsets[_now.weekday()])
+            )
+
+    def test_apply_work_date_interval_with_holidays(self):
+        work_days = frozenset([0, 1, 2, 3, 4])
+        for i in range(14):
+            _now = _today + datetime.timedelta(days=i)
+            _holiday = date.work_date_ceil(
+                _now + datetime.timedelta(days=3), work_days)
+            holidays = [_holiday]
+            # offsets for each day for an interval of 9.5
+            offsets = [15, 15, 15, 15, 17, 16, 15]
+            self.assertEqual(
+                date.apply_work_date_interval(work_days, _now, 9.5, holidays),
                 _now + datetime.timedelta(days=offsets[_now.weekday()])
             )
 
@@ -162,6 +206,26 @@ class DateTestCase(unittest.TestCase):
                     events=events,
                     hours_per_day=1,
                     start_date=_now,
+                ),
+                (_now + datetime.timedelta(days=offsets[_now.weekday()]), 0)
+            )
+
+    def test_ship_date_with_holidays(self):
+        work_days = frozenset([0, 1, 2, 3, 4])
+        for i in range(14):
+            _now = _today + datetime.timedelta(days=i)
+            _holiday = date.work_date_ceil(
+                _now + datetime.timedelta(days=2), work_days)
+            holidays = [_holiday]
+            offsets = [3, 3, 5, 5, 5, 4, 3]
+            # offsets for each day for an interval of 3
+            self.assertEqual(
+                date.ship_date(
+                    work_days=work_days,
+                    hours=2,
+                    hours_per_day=1,
+                    start_date=_now,
+                    holidays=holidays
                 ),
                 (_now + datetime.timedelta(days=offsets[_now.weekday()]), 0)
             )

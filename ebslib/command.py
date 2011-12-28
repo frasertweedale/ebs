@@ -256,7 +256,8 @@ class Estimate(EBSCommand):
             future_dates = (
                 _date.ship_date(
                     hours=h, hours_per_day=hpd, start_date=today,
-                    events=list(e.get_events(start=tomorrow))
+                    events=list(e.get_events(start=tomorrow)),
+                    holidays=self._store.holidays
                 )
                 for h in future_slice
             )

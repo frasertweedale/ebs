@@ -28,7 +28,8 @@ def ship_date(
     hours=None,
     events=(),
     hours_per_day=None,
-    start_date=None
+    start_date=None,
+    holidays=()
 ):
     """Calculate the projected ship date.
 
@@ -44,6 +45,12 @@ def ship_date(
     ``hours_per_day``
       The number of hours in a day that can be devoted to
       completion of tasks and events.
+    ``start_date``
+      The date from which the ship date will be calculated.  If not
+      supplied, the current date will be used.
+    ``holidays``
+      Optional collection of holidays; such days will not count as
+      work days.
 
     Return a tuple of the calculated ship date and the hours remaining
     on the calculated ship date, in that order.
@@ -61,19 +68,18 @@ def ship_date(
     days = hours / hours_per_day
     remaining = \
         round((hours_per_day - (hours % hours_per_day)) % hours_per_day, 3)
-    ship = apply_work_date_interval(work_days, start_date, days)
+    ship = apply_work_date_interval(work_days, start_date, days, holidays)
     if events:
         return _add_events(
-            start_date, ship,
-            remaining, events, hours_per_day
-        )
+            start_date, ship, remaining, events, hours_per_day, holidays)
     return ship, remaining
 
 
 def _add_events(
     start, end,
     hours_remaining,
-    events, hpd
+    events, hpd,
+    holidays=()
 ):
     """Mix a events into an estimate.
 
@@ -89,8 +95,11 @@ def _add_events(
       Hours remaining on the estimated date.
     ``events``
       A Sequence of events.
-    ``hours_per_day``
+    ``hpd``
       The number of hours per day.
+    ``holidays``
+      Optional collection of holidays; such days will not count as
+      work days.
     """
     event_hours = sum(
         e.cost for e in events
@@ -99,26 +108,30 @@ def _add_events(
     new_end, new_hours_remaining = ship_date(
         hours=event_hours - hours_remaining,
         hours_per_day=hpd,
-        start_date=end
+        start_date=end,
+        holidays=holidays
     )
     if new_end == end:
         return end, new_hours_remaining
-    return _add_events(end, new_end, new_hours_remaining, events, hpd)
+    return _add_events(
+        end, new_end, new_hours_remaining, events, hpd, holidays)
 
 
-def work_date_ceil(work_days, date):
+def work_date_ceil(date, work_days=(), holidays=()):
     """Return the next work date on or after the given date."""
-    # try at most 7 times, then explode
-    for i in range(7):
+    # try for at most 7 days plus the number of holidays
+    for i in range(7 + len(holidays)):
         new_date = date + datetime.timedelta(days=i)
-        if new_date.weekday() in work_days:
+        weekday = new_date.weekday()
+        if weekday in work_days and new_date not in holidays:
             return new_date
     raise ValueError("Argument 'work_days' is invalid.")
 
 
-def apply_work_date_interval(work_days, start, interval):
-    _cur = work_date_ceil(work_days, start)
+def apply_work_date_interval(work_days, start, interval, holidays=()):
+    _cur = work_date_ceil(start, work_days, holidays)
     interval = interval if _cur == start else interval - 1
     for i in range(int(math.ceil(interval))):
-        _cur = work_date_ceil(work_days, _cur + datetime.timedelta(days=1))
+        _next = _cur + datetime.timedelta(days=1)
+        _cur = work_date_ceil(_next, work_days, holidays)
     return _cur
