@@ -450,7 +450,7 @@ class Sync(EBSCommand):
 
     def _add_or_update_task(self, bug):
         if self._store.estimator_exists(bug.data['assigned_to']):
-            if self._store.task_exists(bug.id):
+            if self._store.task_exists(str(bug.id)):
                 self._update_task(bug)
             else:
                 self._add_task(bug)
@@ -464,7 +464,7 @@ class Sync(EBSCommand):
         print "ADD    {} : add task: {}".format(bug.id, bug.data['summary'])
 
     def _update_task(self, bug):
-        old_estimator, task = self._store.get_task(bug.id)
+        old_estimator, task = self._store.get_task(str(bug.id))
         estimator = self._store.get_estimator(bug.data['assigned_to'])
         if old_estimator != estimator:
             # move task to new estimator
@@ -484,7 +484,7 @@ class Sync(EBSCommand):
 
     def _extract_task_data(self, bug):
         """Generate pairs of task data extracted from the bug."""
-        yield 'id', bug.id
+        yield 'id', str(bug.id)
         yield 'description', bug.data['summary']
         yield 'estimate', bug.data['estimated_time']
         yield 'actual', 0 if bug.is_open() else bug.actual_time(),
