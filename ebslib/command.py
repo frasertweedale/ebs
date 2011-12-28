@@ -18,6 +18,7 @@ from __future__ import unicode_literals
 
 import argparse
 import datetime
+import functools
 import itertools
 import re
 import textwrap
@@ -294,6 +295,84 @@ class LsEvent(EBSCommand):
                 )
             if not n:
                 print '  No events'
+
+
+def _parser_add_tristate(
+    parser,
+    truearg=None, falsearg=None,
+    truehelp=None, falsehelp=None
+):
+    """Add a tri-state (True, False, None) argument group.
+
+    The destination will be taken from the ``truearg`` argument.
+    """
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--' + truearg, action='store_const', const=True,
+        help=truehelp)
+    group.add_argument('--' + falsearg, action='store_const', const=False,
+        dest=truearg,
+        help=falsehelp)
+
+
+class LsTask(EBSCommand):
+    """List tasks.
+
+    For each matching task, the beginning of the line shows 'C' if the
+    task is complete, otherwise a space, followed by the integer
+    priority of the task, if priority is set.
+    """
+    args = EBSCommand.args + [
+        lambda x: x.add_argument('--estimator', metavar='NAME',
+            action='append',
+            help='limit to the given estimator'),
+        lambda x: x.add_argument('--id', action='append',
+            help='limit to the given task id'),
+        lambda x: x.add_argument('--description', metavar='DESC',
+            action='append',
+            help='limit to tasks with any of substring substrings in '
+                 'description (ignores case)'
+            ),
+        lambda x: x.add_argument('--priority', type=int,
+            help='limit to tasks with the given priority (or higher)'),
+        functools.partial(_parser_add_tristate,
+            truearg='complete', truehelp='limit to completed tasks',
+            falsearg='incomplete', falsehelp='limit to incomplete tasks'
+        ),
+        functools.partial(_parser_add_tristate,
+            truearg='estimated', truehelp='limit to tasks with estimates',
+            falsearg='unestimated',
+            falsehelp='limit to tasks without estimates'
+        ),
+    ]
+
+    def _include_task(self, estimator, task):
+        """Determine whether to include the given task."""
+        return (
+            (self._args.estimator is None
+                or estimator.name in self._args.estimator)
+            and (self._args.id is None
+                or task.id in self._args.id)
+            and (self._args.description is None or any(
+                    s.lower() in task.description.lower()
+                    for s in self._args.description))
+            and (self._args.priority is None
+                or task.priority <= self._args.priority)
+            and (self._args.complete is None
+                or bool(task.completed) == self._args.complete)
+            and (self._args.estimated is None
+                or bool(task.estimate) == self._args.estimated)
+        )
+
+    def _run(self):
+        tasks = self._store.tasks()
+        filtered_tasks = ((e, t) for e, t in tasks if self._include_task(e, t))
+        for estimator, task in filtered_tasks:
+            print '{}{} {}: {}'.format(
+                'C' if task.completed else ' ',
+                task.priority if task.priority else ' ',
+                task.id,
+                task.description
+            )
 
 
 class LsHoliday(EBSCommand):
