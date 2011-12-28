@@ -70,7 +70,7 @@ class Store(object):
                 with open(self._filename) as fp:
                     self._data = read(fp)
             except IOError:
-                self._data = []
+                self._data = {}
         return self._data
 
     @data.deleter
@@ -91,11 +91,15 @@ class Store(object):
     @property
     def estimators(self):
         """Return the estimators in this store as a sequence."""
+        if 'estimators' not in self.data:
+            self.data['estimators'] = []
         return self.data['estimators']
 
     @property
     def holidays(self):
         """Return the holidays in this store as a sequence."""
+        if 'holidays' not in self.data:
+            self.data['holidays'] = []
         return self.data['holidays']
 
     def get_estimator(self, name):

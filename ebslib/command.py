@@ -195,6 +195,18 @@ class AddEvent(EBSCommand):
         self._store.get_estimator(self._args.estimator).events.append(event)
 
 
+class AddHoliday(EBSCommand):
+    """Add a holiday."""
+    args = EBSCommand.args + [
+        lambda x: x.add_argument('--date', required=True, type=date,
+            help='Date of the holiday.'),
+    ]
+
+    def _run(self):
+        if self._args.date not in self._store.holidays:
+            self._store.holidays.append(self._args.date)
+
+
 class AddTask(EBSCommand):
     """Add a task."""
     args = EBSCommand.args + [
@@ -283,6 +295,13 @@ class LsEvent(EBSCommand):
                 print '  No events'
 
 
+class LsHoliday(EBSCommand):
+    """List holidays."""
+    def _run(self):
+        for date in sorted(self._store.holidays):
+            print date
+
+
 class RmEstimator(EBSCommand):
     """Remove an estimator."""
 
@@ -295,6 +314,18 @@ class RmEstimator(EBSCommand):
         estimator = self._store.get_estimator(self._args.name)
         self._store.estimators.remove(estimator)
         print "Removed estimator '{}'.".format(estimator.name)
+
+
+class RmHoliday(EBSCommand):
+    """Remove a holiday."""
+    args = EBSCommand.args + [
+        lambda x: x.add_argument('--date', required=True, type=date,
+            help='Date of the holiday.'),
+    ]
+
+    def _run(self):
+        if self._args.date in self._store.holidays:
+            self._store.holidays.remove(self._args.date)
 
 
 class Stats(EBSCommand):
