@@ -1,5 +1,5 @@
 # This file is part of ebs
-# Copyright (C) 2011 Fraser Tweedale, Benon Technologies Pty Ltd
+# Copyright (C) 2011, 2012 Fraser Tweedale, Benon Technologies Pty Ltd
 #
 # ebs is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -46,6 +46,46 @@ _estimators = [
 ]
 _holidays = [datetime.date(2012, 1, 1)]
 _data = {'estimators': _estimators, 'holidays': _holidays}
+
+
+class EmptyStoreTestCase(unittest.TestCase):
+    """Check store backed by empty file."""
+    def setUp(self):
+        fd, path = tempfile.mkstemp()
+        os.close(fd)
+        self._tmp = path
+        self._store = store.Store(path)
+
+    def tearDown(self):
+        del self._store
+        os.unlink(self._tmp)
+        del self._tmp
+
+    def test_read(self):
+        """Verify that a store will work with an empty file."""
+        self.assertEqual(self._store.estimators, [])
+
+
+class NoStoreTestCase(unittest.TestCase):
+    """Check store backed by nonexistant file."""
+    def setUp(self):
+        fd, path = tempfile.mkstemp()
+        os.close(fd)
+        os.unlink(path)  # remove file immediately, releasing path
+        self._tmp = path
+        self._store = store.Store(path)
+
+    def tearDown(self):
+        del self._store
+        try:
+            os.unlink(self._tmp)
+        except OSError:
+            pass
+        del self._tmp
+
+    def test_read(self):
+        """Verify that a store will work with an empty file."""
+        self.assertEqual(self._store.estimators, [])
 
 
 class StoreTestCase(unittest.TestCase):

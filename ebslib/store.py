@@ -1,5 +1,5 @@
 # This file is part of ebs
-# Copyright (C) 2011 Fraser Tweedale, Benon Technologies Pty Ltd
+# Copyright (C) 2011, 2012 Fraser Tweedale, Benon Technologies Pty Ltd
 #
 # ebs is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -69,7 +69,7 @@ class Store(object):
             try:
                 with open(self._filename) as fp:
                     self._data = read(fp)
-            except IOError:
+            except (IOError, ValueError):
                 self._data = {}
         return self._data
 
