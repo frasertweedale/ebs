@@ -1,5 +1,5 @@
 # This file is part of ebs
-# Copyright (C) 2011 Benon Technologies Pty Ltd, Fraser Tweedale
+# Copyright (C) 2011, 2012 Benon Technologies Pty Ltd, Fraser Tweedale
 #
 # ebs is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -53,6 +53,16 @@ class Command(object):
     An array of (args, kwargs) tuples that will be used as arguments to
     ArgumentParser.add_argument().
     """
+
+    @classmethod
+    def add_parser(cls, subparsers):
+        """Add a subparser for this command to a subparsers object."""
+        name = cls.__name__.lower()
+        parser = subparsers.add_parser(name,
+            help=cls.help(), epilog=cls.epilog(),
+            formatter_class=argparse.RawDescriptionHelpFormatter)
+        [fn(parser) for fn in cls.args]
+        parser.set_defaults(command=cls)
 
     @classmethod
     def help(cls):
@@ -168,7 +178,8 @@ class AddEstimator(EBSCommand):
 
     def _run(self):
         self._store.assert_estimator_not_exist(self._args.name)
-        self._store.data.append(_estimator.Estimator(name=self._args.name))
+        self._store.estimators.append(
+            _estimator.Estimator(name=self._args.name))
 
 
 class AddEvent(EBSCommand):
