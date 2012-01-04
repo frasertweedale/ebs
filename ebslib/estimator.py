@@ -110,7 +110,7 @@ class Estimator(object):
             return [
                 t.estimate / random.choice(velocities)
                 for t in self.pending_tasks()
-                if not (t.priority and t.priority > priority)
+                if not (priority and t.priority and t.priority > priority)
             ]
         except IndexError:
             raise NoHistoryError(

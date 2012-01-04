@@ -192,6 +192,19 @@ class EstimatorTestCase(unittest.TestCase):
         future = e.simulate_future(priority=3)
         self.assertItemsEqual(future, [8, 1])
 
+    def test_simulate_future_without_priority(self):
+        """Simulate the future with tasks with priority, but no filtering."""
+        e = estimator.Estimator.from_dict({
+            'name': 'Bob',
+            'tasks': [
+                {'estimate': 2, 'actual': 2},
+                {'estimate': 8},
+                {'estimate': 1, 'priority': 3},
+            ]
+        })
+        future = e.simulate_future(priority=None)
+        self.assertItemsEqual(future, [8, 1])
+
     def test_simulate_future_with_max_age(self):
         """Simulate a future, ignoring some estimates due to old age."""
         _30d_ago = _today - datetime.timedelta(days=30)
