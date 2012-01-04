@@ -495,12 +495,13 @@ class Sync(EBSCommand):
 
     def _extract_task_data(self, bug):
         """Generate pairs of task data extracted from the bug."""
+        priorities = [v['name'] for v in bug.bz.get_field_values('priority')]
         yield 'id', str(bug.id)
         yield 'description', bug.data['summary']
         yield 'estimate', bug.data['estimated_time']
         yield 'actual', 0 if bug.is_open() else bug.actual_time(),
+        yield 'priority', priorities.index(bug.data['priority']) + 1
         # TODO: extract date of estimate from history
-        # TODO: extract priority
 
 
 # the list got too long; metaprogram it ^_^
