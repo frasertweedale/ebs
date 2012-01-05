@@ -61,7 +61,11 @@ class Command(object):
         parser = subparsers.add_parser(name,
             help=cls.help(), epilog=cls.epilog(),
             formatter_class=argparse.RawDescriptionHelpFormatter)
-        [fn(parser) for fn in cls.args]
+        for arg in cls.args:
+            if callable(arg):
+                arg(parser)
+            else:
+                parser.add_argument(*arg[0], **arg[1])
         parser.set_defaults(command=cls)
 
     @classmethod
@@ -252,9 +256,12 @@ class AddTask(EBSCommand):
 class Estimate(EBSCommand):
     """Perform an estimation using Monte Carlo simulations."""
     args = EBSCommand.args + [
-        lambda x: x.add_argument('--exponent', metavar='N', type=int,
-            default=2,
-            help='Perform 10^N rounds of simulation (n >=2)'),
+        (('--exponent',), dict(metavar='N', type=int, default=2,
+            help='Perform 10^N rounds of simulation (n >=2)')),
+        (('--estimator',), dict(metavar='NAME',
+            help='limit to the given estimator')),
+        (('--priority',), dict(type=int,
+            help='limit to tasks with the given priority (or higher)')),
     ]
 
     def _run(self):
@@ -262,8 +269,14 @@ class Estimate(EBSCommand):
         hpd = float(conf.get('core', 'hours_per_day'))
         today = datetime.date.today()
         tomorrow = today + datetime.timedelta(days=1)
-        for e in self._store.estimators:
-            future_sums = (sum(ests) for ests in e.simulate_futures())
+        if self._args.estimator:
+            self._store.assert_estimator_exist(self._args.estimator)
+            estimators = [self._store.get_estimator(self._args.estimator)]
+        else:
+            estimators = self._store.estimators
+        for e in estimators:
+            futures = e.simulate_futures(priority=self._args.priority)
+            future_sums = (sum(ests) for ests in futures)
             future_slice = (itertools.islice(future_sums, 10 ** exp))
             future_dates = (
                 _date.ship_date(
