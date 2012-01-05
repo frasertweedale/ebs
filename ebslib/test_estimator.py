@@ -177,6 +177,33 @@ class EstimatorTestCase(unittest.TestCase):
             encountered_futures.add(future)
         self.assertSetEqual(possible_futures, encountered_futures)
 
+    def test_simulate_futures(self):
+        """Test the infinite generator of simulations of the future."""
+        e = estimator.Estimator.from_dict({
+            'name': 'Bob',
+            'tasks': [
+                {'estimate': 4, 'actual': 2},
+                {'estimate': 2, 'actual': 2},
+                {'estimate': 2, 'actual': 4},
+                {'estimate': 8},
+                {'estimate': 1},
+            ]
+        })
+        possible_futures = set([
+            frozenset((0.5, 4)), frozenset((0.5, 8)), frozenset((0.5, 16)),
+            frozenset((1, 4)), frozenset((1, 8)), frozenset((1, 16)),
+            frozenset((2, 4)), frozenset((2, 8)), frozenset((2, 16)),
+        ])
+        encountered_futures = set()
+        futures = e.simulate_futures()
+        while encountered_futures < possible_futures:
+            future = next(futures)
+            self.assertEqual(len(future), 2)
+            future = frozenset(future)
+            self.assertIn(future, possible_futures)
+            encountered_futures.add(future)
+        self.assertSetEqual(possible_futures, encountered_futures)
+
     def test_simulate_future_with_priority(self):
         """Simulate the future with some tasks filtered by priority."""
         e = estimator.Estimator.from_dict({

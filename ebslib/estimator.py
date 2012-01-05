@@ -118,10 +118,10 @@ class Estimator(object):
                 .format(self.name)
             )
 
-    def simulate_futures(self, max_age=None):
+    def simulate_futures(self, **kwargs):
         """Generate simulated outcomes."""
         while True:
-            yield self.simulate_future(max_age)
+            yield self.simulate_future(**kwargs)
 
     def get_events(self, start=None, stop=None):
         """Generate the estimators events, optionally filtered by date.
