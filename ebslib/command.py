@@ -450,7 +450,12 @@ class Stats(EBSCommand):
 
 
 class Sync(EBSCommand):
-    """Sync task and time from Bugzilla."""
+    """Sync task data from Bugzilla."""
+    args = EBSCommand.args + [
+        (('--delete-excluded',), dict(action='store_true',
+            help='Delete all tasks not returned by Bugzilla.'))
+    ]
+
     def _parse_dict(self, string):
         pairs = string.split(',')
         items = ((x.strip() for x in pair.split('=')) for pair in pairs)
@@ -474,8 +479,19 @@ class Sync(EBSCommand):
         bz = bzlib.bugzilla.Bugzilla(**kwargs)
 
         bugs = bzlib.bug.Bug.search(bz, **_search_args)
+        bug_ids = set()
         for bug in sorted(bugs, key=lambda x: x.id):
             self._add_or_update_task(bug)
+            bug_ids.add(str(bug.id))
+
+        if self._args.delete_excluded:
+            stale_tasks = set()
+            for estimator, task in self._store.tasks():
+                if task.id not in bug_ids:
+                    stale_tasks.add(task)
+            for task in stale_tasks:
+                estimator.tasks.remove(task)
+                print "DELETE {} : {}".format(task.id, task.description)
 
     def _add_or_update_task(self, bug):
         if self._store.estimator_exists(bug.data['assigned_to']):
