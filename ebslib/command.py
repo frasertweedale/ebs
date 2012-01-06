@@ -493,7 +493,7 @@ class Sync(EBSCommand):
         if old_estimator != estimator:
             # move task to new estimator
             old_estimator.tasks.remove(task)
-            estimator.tasks.add(task)
+            estimator.tasks.append(task)
             print "MOVE   {} : reassigned from '{}' to '{}'.".format(
                 old_estimator.name, estimator.name)
         diff = False
