@@ -452,10 +452,15 @@ class Stats(EBSCommand):
 class Sync(EBSCommand):
     """Sync task and time from Bugzilla."""
     def _parse_dict(self, string):
-        # TODO: break out into util module?
         pairs = string.split(',')
         items = ((x.strip() for x in pair.split('=')) for pair in pairs)
-        return dict(items)
+        d = {}
+        for k, v in items:
+            if k in d:
+                d[k].append(v)
+            else:
+                d[k] = [v]
+        return d
 
     def _run(self):
         sync_conf = dict(conf.items('sync'))
