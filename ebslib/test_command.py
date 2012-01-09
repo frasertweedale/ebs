@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
+import datetime
 import os
 import re
 import tempfile
@@ -22,6 +23,8 @@ import unittest
 
 from . import command
 from . import store
+from . import estimator
+from . import task
 
 
 class CommandTestCase(unittest.TestCase):
@@ -59,3 +62,30 @@ class AddEstimatorTestCase(CommandTestCase):
             r'exists.*\b{}\b'.format(re.escape(name))
         ):
             self.run_command(['--name', name])
+
+
+class AddEventTestCase(CommandTestCase):
+    _command = command.AddEvent
+
+    def setUp(self):
+        super(AddEventTestCase, self).setUp()
+        with self._store as store:
+            store.estimators.append(
+                estimator.Estimator(name='JoeBloggs@example.com'))
+
+    def test_add_event(self):
+        name = 'JoeBloggs@example.com'
+        today = datetime.date.today()
+        datestr = '{}-{:02}-{:02}'.format(today.year, today.month, today.day)
+        self.assertTrue(self._store.estimator_exists(name))
+        del self._store.data  # purge data
+        self.run_command([
+            '--estimator', name,
+            '--date', datestr,
+            '--cost', '2.5',
+            '--desc', 'Leave'
+        ])
+        self.assertEqual(
+            self._store.get_estimator(name).events,
+            [task.Event(date=today, cost=2.5, description='Leave')]
+        )
