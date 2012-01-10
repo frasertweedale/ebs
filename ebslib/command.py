@@ -516,7 +516,7 @@ class Sync(EBSCommand):
             old_estimator.tasks.remove(task)
             estimator.tasks.append(task)
             print "MOVE   {} : reassigned from '{}' to '{}'.".format(
-                old_estimator.name, estimator.name)
+                bug.id, old_estimator.name, estimator.name)
         diff = False
         for k, v in self._extract_task_data(bug):
             oldv = getattr(task, k)
