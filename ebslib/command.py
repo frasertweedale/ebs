@@ -534,7 +534,8 @@ class Sync(EBSCommand):
         yield 'id', str(bug.id)
         yield 'description', bug.data['summary']
         yield 'estimate', bug.data['estimated_time']
-        yield 'actual', 0 if bug.is_open() else bug.actual_time(),
+        yield 'completed', not bug.is_open()
+        yield 'actual', bug.actual_time(),
         yield 'priority', priorities.index(bug.data['priority']) + 1
         # TODO: extract date of estimate from history
 
