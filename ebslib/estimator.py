@@ -73,6 +73,7 @@ class Estimator(object):
             for t in self.completed_tasks()
             if not (max_age and t.date and _today - t.date > abs(max_age))
                 and t.estimate  # exclude tasks with no estimate
+                and t.actual    # exclude tasks with no actual
         ]
 
     def min_velocity(self, max_age=None):

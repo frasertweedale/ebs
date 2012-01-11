@@ -150,6 +150,18 @@ class EstimatorTestCase(unittest.TestCase):
         })
         self.assertItemsEqual(e.velocities(max_age=-_30d), [])
 
+    def test_velocities_with_zero_actual(self):
+        """Test exclusion of completed tasks with an actual of zero."""
+        """Test exclusion of completed task with no estimate."""
+        e = estimator.Estimator.from_dict({
+            'name': 'Bob',
+            'tasks': [
+                {'estimate': 4, 'actual': 4},
+                {'estimate': 2, 'completed': True, 'actual': 0}
+            ]
+        })
+        self.assertListEqual(e.velocities(), [1])
+
     def test_simulate_future(self):
         """Test simulations of the future."""
         e = estimator.Estimator.from_dict({
