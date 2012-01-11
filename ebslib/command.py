@@ -391,11 +391,12 @@ class LsTask(EBSCommand):
         tasks = self._store.tasks()
         filtered_tasks = ((e, t) for e, t in tasks if self._include_task(e, t))
         for estimator, task in filtered_tasks:
-            print '{}{}{} {}: {}'.format(
+            print '{}{}{} {} {}: {}'.format(
                 'E' if task.estimate else ' ',
                 'C' if task.completed else ' ',
                 task.priority if task.priority else ' ',
                 task.id,
+                estimator.name,
                 task.description
             )
 
