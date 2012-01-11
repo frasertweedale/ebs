@@ -42,7 +42,7 @@ class TaskTestCase(unittest.TestCase):
     def test_eq(self):
         data = dict(
             id=1234, description='Foo', priority=1,
-            estimate=1, date=_today, actual=2
+            estimate=1, date=_today, completed=True, actual=2
         )
         self.assertEqual(task.Task.from_dict(data), task.Task.from_dict(data))
         self.assertSetEqual(set(data.viewkeys()), task.Task.__slots__)
@@ -51,11 +51,11 @@ class TaskTestCase(unittest.TestCase):
         # check one differing attribute at a time
         data = dict(
             id=1, description='Foo', priority=0,
-            estimate=1, date=_today, actual=2
+            estimate=1, date=_today, completed=True, actual=2
         )
         other_data = dict(
             id=None, description='Bar', priority=1,
-            estimate=2, date=_yesterday, actual=1
+            estimate=2, date=_yesterday, completed=False, actual=1
         )
         checked_attrs = set()
         t = task.Task.from_dict(data)
@@ -69,15 +69,26 @@ class TaskTestCase(unittest.TestCase):
     def test_completed(self):
         t = task.Task(estimate=1)
         self.assertFalse(t.completed)
+
         t = task.Task(estimate=1, actual=0)
         self.assertFalse(t.completed)
         t = task.Task(estimate=1, actual=2)
+        self.assertTrue(t.completed)
+
+        t = task.Task(estimate=1, completed=False, actual=0)
+        self.assertFalse(t.completed)
+        t = task.Task(estimate=1, completed=False, actual=2)
+        self.assertFalse(t.completed)
+        t = task.Task(estimate=1, completed=True, actual=0)
+        self.assertTrue(t.completed)
+        t = task.Task(estimate=1, completed=True, actual=2)
         self.assertTrue(t.completed)
 
     def test_velocity(self):
         t = task.Task(estimate=5, actual=0)
         with self.assertRaises(task.NotCompletedError):
             t.velocity
+        t.completed = True
         t.actual = 6
         self.assertEqual(t.velocity, 5 / 6)
         t.actual = 5

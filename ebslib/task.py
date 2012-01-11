@@ -35,7 +35,8 @@ class Task(object):
     """
 
     __slots__ = frozenset([
-        'id', 'priority', 'estimate', 'date', 'actual', 'description'
+        'id', 'priority', 'description',
+        'estimate', 'date', 'completed', 'actual',
     ])
 
     @classmethod
@@ -44,7 +45,7 @@ class Task(object):
 
     def __init__(self,
         id=None, description=None, priority=None,
-        estimate=0, date=None, actual=0
+        estimate=0, date=None, completed=None, actual=0
     ):
         """Initialise the task
 
@@ -60,9 +61,11 @@ class Task(object):
         ``date``
           Optional ``datetime.date`` on which the estimate was made.
           May be used to filter old estimates.
+        ``completed``
+          Whether the task has been completed.  Defaults to True if
+          there is an actual cost specified, otherwise False.
         ``actual``
-          The actual cost.  Zero implies that the task has not been
-          completed.
+          The actual cost.
         """
         self.id = id
         self.description = description
@@ -70,11 +73,7 @@ class Task(object):
         self.estimate = estimate
         self.date = date
         self.actual = actual
-
-    @property
-    def completed(self):
-        """Return whether the task is completed or not."""
-        return self.actual
+        self.completed = bool(actual) if completed is None else completed
 
     @property
     def velocity(self):
