@@ -262,6 +262,8 @@ class Estimate(EBSCommand):
             help='limit to the given estimator')),
         (('--priority',), dict(type=int,
             help='limit to tasks with the given priority (or higher)')),
+        (('--max-velocity-age',), dict(type=int, metavar='DAYS',
+            help='use velocities no older than DAYS days')),
     ]
 
     def _run(self):
@@ -269,13 +271,18 @@ class Estimate(EBSCommand):
         hpd = float(conf.get('core', 'hours_per_day'))
         today = datetime.date.today()
         tomorrow = today + datetime.timedelta(days=1)
+        max_age = datetime.timedelta(days=self._args.max_velocity_age) \
+            if self._args.max_velocity_age is not None else None
         if self._args.estimator:
             self._store.assert_estimator_exist(self._args.estimator)
             estimators = [self._store.get_estimator(self._args.estimator)]
         else:
             estimators = self._store.estimators
         for e in estimators:
-            futures = e.simulate_futures(priority=self._args.priority)
+            futures = e.simulate_futures(
+                priority=self._args.priority,
+                max_age=max_age
+            )
             future_sums = (sum(ests) for ests in futures)
             future_slice = (itertools.islice(future_sums, 10 ** exp))
             future_dates = (
