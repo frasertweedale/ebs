@@ -538,7 +538,15 @@ class Sync(EBSCommand):
         yield 'completed', not bug.is_open()
         yield 'actual', bug.actual_time(),
         yield 'priority', priorities.index(bug.data['priority']) + 1
-        # TODO: extract date of estimate from history
+        yield 'date', self._extract_task_date(bug)
+
+    def _extract_task_date(self, bug):
+        """Extract the date of the estimate of a bug."""
+        for changeset in bug.history:
+            changed_fields = (x['field_name'] for x in changeset['changes'])
+            if 'estimated_time' in changed_fields:
+                return changeset['when'].date()
+        return None
 
 
 # the list got too long; metaprogram it ^_^
