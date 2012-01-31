@@ -446,16 +446,17 @@ class Stats(EBSCommand):
     def _run(self):
         for e in self._store.estimators:
             print e.name
-            print (
-                '  n: {}, min: {:.2}, max: {:.2}, mean: {:.2}, stddev: {:.2}'
-                .format(
-                    len(e.velocities()),
-                    e.min_velocity(),
-                    e.max_velocity(),
-                    e.mean_velocity(),
-                    e.stddev_velocity()
+            try:
+                stats = (
+                    len(e.velocities()), e.min_velocity(), e.max_velocity(),
+                    e.mean_velocity(), e.stddev_velocity()
                 )
-            )
+                print (
+                    '  n: {}, min: {:.2}, max: {:.2}, mean: {:.2}, '
+                    'stddev: {:.2}'.format(*stats)
+                )
+            except _estimator.NoHistoryError as e:
+                print '  ' + e.message
 
 
 class Sync(EBSCommand):

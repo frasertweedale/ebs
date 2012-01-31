@@ -76,18 +76,26 @@ class Estimator(object):
                 and t.actual    # exclude tasks with no actual
         ]
 
-    def min_velocity(self, max_age=None):
-        return min(self.velocities(max_age))
+    def _fn_velocity(self, f, **kwargs):
+        try:
+            return f(self.velocities(**kwargs))
+        except:
+            raise NoHistoryError(
+                "Estimator '{}' has no useful estimation history."
+                .format(self.name)
+            )
 
-    def max_velocity(self, max_age=None):
-        return max(self.velocities(max_age))
+    def min_velocity(self, **kwargs):
+        return self._fn_velocity(min, **kwargs)
 
-    def mean_velocity(self, max_age=None):
-        velocities = self.velocities(max_age)
-        return sum(velocities) / len(velocities)
+    def max_velocity(self, **kwargs):
+        return self._fn_velocity(max, **kwargs)
 
-    def stddev_velocity(self, max_age=None):
-        velocities = self.velocities(max_age)
+    def mean_velocity(self, **kwargs):
+        return self._fn_velocity(lambda x: sum(x) / len(x), **kwargs)
+
+    def stddev_velocity(self, **kwargs):
+        velocities = self.velocities(**kwargs)
         N = len(velocities)
         mu = self.mean_velocity()
         return math.sqrt(sum((x - mu) ** 2 for x in velocities) / N)
