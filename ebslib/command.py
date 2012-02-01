@@ -305,8 +305,16 @@ class Estimate(EBSCommand):
                     print '  {:2}% : {}'.format(
                         (i + 1) / 10 ** (exp - 2) - 1, sorted_futures[i][0]
                     )
-            except _estimator.NoHistoryError as e:
-                print '  ' + e.message
+            except _estimator.NoHistoryError as exc:
+                print '  ' + exc.message
+                est = sum(t.estimate for t in e.pending_tasks())
+                print '  sum of estimates    = {}h'.format(est)
+                date = _date.ship_date(
+                    hours=est, hours_per_day=hpd, start_date=today,
+                    events=list(e.get_events(start=tomorrow)),
+                    holidays=self._store.holidays
+                )[0]
+                print '  estimated ship date = {}'.format(date)
 
 
 class LsEvent(EBSCommand):
