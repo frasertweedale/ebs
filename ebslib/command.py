@@ -503,11 +503,9 @@ class Sync(EBSCommand):
             bug_ids.add(str(bug.id))
 
         if self._args.delete_excluded:
-            stale_tasks = set()
-            for estimator, task in self._store.tasks():
-                if task.id not in bug_ids:
-                    stale_tasks.add(task)
-            for task in stale_tasks:
+            stale_tasks = \
+                ((e, t) for e, t in self._store.tasks() if t.id not in bug_ids)
+            for estimator, task in stale_tasks:
                 estimator.tasks.remove(task)
                 print "DELETE {} : {}".format(task.id, task.description)
 
