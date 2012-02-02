@@ -451,17 +451,26 @@ class RmHoliday(EBSCommand):
 
 class Stats(EBSCommand):
     """Calculate velocity statistics for each estimator."""
+    args = EBSCommand.args + [
+        (('--max-velocity-age',), dict(type=int, metavar='DAYS',
+            help='use velocities no older than DAYS days')),
+    ]
+
     def _run(self):
+        max_age = datetime.timedelta(days=self._args.max_velocity_age) \
+            if self._args.max_velocity_age is not None else None
         for e in self._store.estimators:
             print e.name
             try:
-                stats = (
-                    len(e.velocities()), e.min_velocity(), e.max_velocity(),
-                    e.mean_velocity(), e.stddev_velocity()
-                )
+                stat_fns = [
+                    lambda **kw: len(e.velocities(**kw)), e.min_velocity,
+                    e.max_velocity, e.mean_velocity, e.stddev_velocity
+                ]
                 print (
                     '  n: {}, min: {:.2}, max: {:.2}, mean: {:.2}, '
-                    'stddev: {:.2}'.format(*stats)
+                    'stddev: {:.2}'.format(
+                        *(x(max_age=max_age) for x in stat_fns)
+                    )
                 )
             except _estimator.NoHistoryError as e:
                 print '  ' + e.message
