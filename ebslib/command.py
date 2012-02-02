@@ -475,14 +475,14 @@ class Sync(EBSCommand):
     ]
 
     def _parse_dict(self, string):
-        pairs = string.split(',')
+        pairs = re.split(r'\s*,\s+', string)  # split by comma with whitespace
         items = ((x.strip() for x in pair.split('=')) for pair in pairs)
         d = {}
         for k, v in items:
             if k in d:
                 d[k].append(v)
             else:
-                d[k] = [v]
+                d[k] = v.split(',')
         return d
 
     def _run(self):
