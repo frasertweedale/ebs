@@ -100,7 +100,7 @@ class Estimator(object):
         mu = self.mean_velocity()
         return math.sqrt(sum((x - mu) ** 2 for x in velocities) / N)
 
-    def simulate_future(self, max_age=None, priority=None):
+    def simulate_future(self, project=None, max_age=None, priority=None):
         """Simulate the future once.
 
         This implements one round of a Monte Carlo simulation.  The
@@ -120,6 +120,7 @@ class Estimator(object):
                 t.estimate / random.choice(velocities)
                 for t in self.pending_tasks()
                 if not (priority and t.priority and t.priority > priority)
+                    and (not project or t.project == project)
             ]
         except IndexError:
             raise NoHistoryError(

@@ -284,6 +284,36 @@ class EstimatorTestCase(unittest.TestCase):
         with self.assertRaises(estimator.NoHistoryError):
             e.simulate_future()
 
+    def test_simulate_future_with_project(self):
+        """Simulate the future with some tasks filtered by project."""
+        e = estimator.Estimator.from_dict({
+            'name': 'Bob',
+            'tasks': [
+                {'estimate': 1, 'actual': 1},
+                {'estimate': 2, 'project': 'A'},
+                {'estimate': 4, 'project': 'B'},
+                {'estimate': 8},
+            ]
+        })
+        future = e.simulate_future(project='A')
+        self.assertItemsEqual(future, [2])
+        future = e.simulate_future(project='B')
+        self.assertItemsEqual(future, [4])
+
+    def test_simulate_future_without_project(self):
+        """Simulate the future with tasks with project, but no filtering."""
+        e = estimator.Estimator.from_dict({
+            'name': 'Bob',
+            'tasks': [
+                {'estimate': 2, 'actual': 2},
+                {'estimate': 2, 'project': 'A'},
+                {'estimate': 4, 'project': 'B'},
+                {'estimate': 8},
+            ]
+        })
+        future = e.simulate_future()
+        self.assertItemsEqual(future, [2, 4, 8])
+
     def test_get_events(self):
         e = estimator.Estimator.from_dict({
             'name': 'Bob',
