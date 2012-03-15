@@ -20,6 +20,7 @@ import argparse
 import datetime
 import functools
 import itertools
+import operator
 import re
 import textwrap
 
@@ -28,6 +29,12 @@ from . import task as _task
 from . import estimator as _estimator
 from . import date as _date
 from . import store as _store
+
+try:
+    import bzlib.bugzilla
+    import bzlib.bug
+except ImportError:
+    pass
 
 conf = _config.Config.get_config('~/.ebsrc')
 
@@ -230,6 +237,8 @@ class AddTask(EBSCommand):
             help='Estimator (assignee) of the task.'),
         lambda x: x.add_argument('--id', required=True,
             help='Unique identifier for task.'),
+        lambda x: x.add_argument('--project',
+            help='Project of the task.'),
         lambda x: x.add_argument('--description', metavar='DESC',
             help='Description of task.'),
         lambda x: x.add_argument('--priority', type=int,
@@ -243,7 +252,10 @@ class AddTask(EBSCommand):
         lambda x: x.add_argument('--date', type=date,
             help='Date of the estimate'),
     ]
-    _attrs = ('id', 'description', 'priority', 'estimate', 'actual', 'date')
+    _attrs = (
+        'id', 'project', 'description',
+        'priority', 'estimate', 'actual', 'date'
+    )
 
     def _run(self):
         self._store.assert_task_not_exist(self._args.id)
@@ -266,55 +278,75 @@ class Estimate(EBSCommand):
             help='use velocities no older than DAYS days')),
     ]
 
+    def _futures(self, estimator, project):
+        """Get possible futures for the given estimator and project.
+
+        Return an list of ten possible futures, as an int hours
+        remaining, in increasing order at an interval of 10%.
+        """
+        exp = self.exp
+        futures = estimator.simulate_futures(
+            priority=self._args.priority,
+            project=project,
+            max_age=self.max_age
+        )
+        future_sums = (sum(ests) for ests in futures)
+        future_limited = sorted(itertools.islice(future_sums, 10 ** exp))
+        return future_limited[10 ** (exp - 1) - 1:10 ** exp:10 ** (exp - 1)]
+
     def _run(self):
-        exp = self._args.exponent if self._args.exponent >= 2 else 2
+        self.exp = self._args.exponent if self._args.exponent >= 2 else 2
         hpd = float(conf.get('core', 'hours_per_day'))
         today = datetime.date.today()
         tomorrow = today + datetime.timedelta(days=1)
-        max_age = datetime.timedelta(days=self._args.max_velocity_age) \
+        # maximum estimate age
+        self.max_age = datetime.timedelta(days=self._args.max_velocity_age) \
             if self._args.max_velocity_age is not None else None
+
         if self._args.estimator:
             self._store.assert_estimator_exist(self._args.estimator)
             estimators = [self._store.get_estimator(self._args.estimator)]
         else:
             estimators = self._store.estimators
-        for e in estimators:
-            futures = e.simulate_futures(
-                priority=self._args.priority,
-                max_age=max_age
-            )
-            future_sums = (sum(ests) for ests in futures)
-            future_slice = (itertools.islice(future_sums, 10 ** exp))
-            future_dates = (
-                _date.ship_date(
-                    hours=h, hours_per_day=hpd, start_date=today,
-                    events=list(e.get_events(start=tomorrow)),
-                    holidays=self._store.holidays
-                )
-                for h in future_slice
-            )
+
+        # get sliced futures for all estimators
+        projects = conf.get('core', 'projects').split(',')
+        futures = {
+            e: [(p, self._futures(e, p)) for p in projects]
+            for e in estimators
+        }
+
+        for e, ps in futures.viewitems():
+            acc = [0 for i in range(10)]
             print e.name
-            try:
-                sorted_futures = \
-                    sorted(future_dates, key=lambda x: (x[0], -x[1]))
-                for i in xrange(
-                    10 ** (exp - 1) - 1,
-                    10 ** exp,
-                    10 ** (exp - 1)
-                ):
-                    print '  {:2}% : {}'.format(
-                        (i + 1) / 10 ** (exp - 2) - 1, sorted_futures[i][0]
+            for project, estimates in ps:
+                print '  ' + project
+                acc = map(operator.add, acc, estimates)
+                future_dates = [
+                    _date.ship_date(
+                        hours=h, hours_per_day=hpd, start_date=today,
+                        events=list(e.get_events(start=tomorrow)),
+                        holidays=self._store.holidays
                     )
-            except _estimator.NoHistoryError as exc:
-                print '  ' + exc.message
-                est = sum(t.estimate for t in e.pending_tasks())
-                print '  sum of estimates    = {}h'.format(est)
-                date = _date.ship_date(
-                    hours=est, hours_per_day=hpd, start_date=today,
-                    events=list(e.get_events(start=tomorrow)),
-                    holidays=self._store.holidays
-                )[0]
-                print '  estimated ship date = {}'.format(date)
+                    for h in acc
+                ]
+                try:
+                    for i in range(len(future_dates)):
+                        percent = (i + 1) * 100 / len(future_dates) - 1
+                        print '    {:2}% : {}'.format(
+                            percent,
+                            future_dates[i][0]
+                        )
+                except _estimator.NoHistoryError as exc:
+                    print '  ' + exc.message
+                    est = sum(t.estimate for t in e.pending_tasks())
+                    print '  sum of estimates    = {}h'.format(est)
+                    date = _date.ship_date(
+                        hours=est, hours_per_day=hpd, start_date=today,
+                        events=list(e.get_events(start=tomorrow)),
+                        holidays=self._store.holidays
+                    )[0]
+                    print '  estimated ship date = {}'.format(date)
 
 
 class LsEvent(EBSCommand):
@@ -366,6 +398,8 @@ class LsTask(EBSCommand):
             help='limit to the given estimator'),
         lambda x: x.add_argument('--id', action='append',
             help='limit to the given task id'),
+        lambda x: x.add_argument('--project', action='append',
+            help='limit to given project(s)'),
         lambda x: x.add_argument('--description', metavar='DESC',
             action='append',
             help='limit to tasks with any of substring substrings in '
@@ -400,6 +434,8 @@ class LsTask(EBSCommand):
                 or bool(task.completed) == self._args.complete)
             and (self._args.estimated is None
                 or bool(task.estimate) == self._args.estimated)
+            and (self._args.project is None
+                or task.project in self._args.project)
         )
 
     def _run(self):
@@ -495,12 +531,29 @@ class Sync(EBSCommand):
         return d
 
     def _run(self):
-        sync_conf = dict(conf.items('sync'))
-        _search_args = self._parse_dict(sync_conf['search_args'])
+        projects = conf.get('core', 'projects').split(',')
+        bugs = set()  # accumulate bugs
+        for project in projects:
+            bugs |= self._sync_project(project)
 
-        # import bugzillatools modules
-        import bzlib.bugzilla
-        import bzlib.bug
+        if self._args.delete_excluded:
+            stale_tasks = \
+                [(e, t) for e, t in self._store.tasks() if t.id not in bugs]
+            for estimator, task in stale_tasks:
+                estimator.tasks.remove(task)
+                print "DELETE {} : {}".format(task.id, task.description)
+
+    def _sync_project(self, project):
+        """Sync the given project.
+
+        Bugzilla sync configuration is stored on a per-project basis.
+
+        Return the ``set`` of bugs matched by the search arguments
+        for the given project.
+        """
+        self._project = project  # set project context
+        sync_conf = dict(conf.items('.'.join(['sync', project])))
+        _search_args = self._parse_dict(sync_conf['search_args'])
 
         kwargs = {x: sync_conf[x] for x in ('url', 'user', 'password')}
         bz = bzlib.bugzilla.Bugzilla(**kwargs)
@@ -510,13 +563,7 @@ class Sync(EBSCommand):
         for bug in sorted(bugs, key=lambda x: x.id):
             self._add_or_update_task(bug)
             bug_ids.add(str(bug.id))
-
-        if self._args.delete_excluded:
-            stale_tasks = \
-                [(e, t) for e, t in self._store.tasks() if t.id not in bug_ids]
-            for estimator, task in stale_tasks:
-                estimator.tasks.remove(task)
-                print "DELETE {} : {}".format(task.id, task.description)
+        return bug_ids
 
     def _add_or_update_task(self, bug):
         if self._store.estimator_exists(bug.data['assigned_to']):
@@ -562,6 +609,7 @@ class Sync(EBSCommand):
         yield 'actual', bug.actual_time(),
         yield 'priority', priorities.index(bug.data['priority']) + 1
         yield 'date', self._extract_task_date(bug)
+        yield 'project', self._project
 
     def _extract_task_date(self, bug):
         """Extract the date of the estimate of a bug."""
