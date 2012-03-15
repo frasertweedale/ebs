@@ -36,7 +36,7 @@ class Task(object):
     """
 
     __slots__ = frozenset([
-        'id', 'priority', 'description',
+        'id', 'project', 'priority', 'description',
         'estimate', 'date', 'completed', 'actual',
     ])
 
@@ -45,7 +45,7 @@ class Task(object):
         return cls(**data)
 
     def __init__(self,
-        id=None, description=None, priority=None,
+        id=None, project=None, description=None, priority=None,
         estimate=0, date=None, completed=None, actual=0
     ):
         """Initialise the task
@@ -67,6 +67,8 @@ class Task(object):
           there is an actual cost specified, otherwise False.
         ``actual``
           The actual cost.
+        ``project``
+          The project to which the task belongs.
         """
         self.id = id
         self.description = description
@@ -75,6 +77,7 @@ class Task(object):
         self.date = date
         self.actual = actual
         self.completed = bool(actual) if completed is None else completed
+        self.project = project
 
     @property
     def velocity(self):

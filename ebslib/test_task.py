@@ -42,7 +42,7 @@ class TaskTestCase(unittest.TestCase):
 
     def test_eq(self):
         data = dict(
-            id=1234, description='Foo', priority=1,
+            id=1234, project='FooProj', description='Foo', priority=1,
             estimate=1, date=_today, completed=True, actual=2
         )
         self.assertEqual(task.Task.from_dict(data), task.Task.from_dict(data))
@@ -51,11 +51,11 @@ class TaskTestCase(unittest.TestCase):
     def test_ne(self):
         # check one differing attribute at a time
         data = dict(
-            id=1, description='Foo', priority=0,
+            id=1, project='FooProj', description='Foo', priority=0,
             estimate=1, date=_today, completed=True, actual=2
         )
         other_data = dict(
-            id=None, description='Bar', priority=1,
+            id=None, project='BarProj', description='Bar', priority=1,
             estimate=2, date=_yesterday, completed=False, actual=1
         )
         checked_attrs = set()
