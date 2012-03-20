@@ -485,6 +485,22 @@ class RmHoliday(EBSCommand):
             self._store.holidays.remove(self._args.date)
 
 
+class RmTask(EBSCommand):
+    """Remove a task."""
+    args = EBSCommand.args + [
+        lambda x: x.add_argument('--id', required=True,
+            help='ID of the task to remove'),
+    ]
+
+    def _run(self):
+        for estimator, task in self._store.tasks():
+            if task.id == self._args.id:
+                estimator.tasks.remove(task)
+                print 'Removed task {}.'.format(self._args.id)
+                return
+        print 'Task {} not found.'.format(self._args.id)
+
+
 class Stats(EBSCommand):
     """Calculate velocity statistics for each estimator."""
     args = EBSCommand.args + [

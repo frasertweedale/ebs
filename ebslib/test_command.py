@@ -89,3 +89,41 @@ class AddEventTestCase(CommandTestCase):
             self._store.get_estimator(name).events,
             [task.Event(date=today, cost=2.5, description='Leave')]
         )
+
+
+class RmTaskTestCase(CommandTestCase):
+    _command = command.RmTask
+
+    def setUp(self):
+        super(RmTaskTestCase, self).setUp()
+        with self._store as store:
+            store.estimators.append(
+                estimator.Estimator(
+                    name='JoeBloggs@example.com',
+                    tasks=[task.Task(id='foo'), task.Task(id='bar')]
+                )
+            )
+        del self._store.data  # guarantee clean store
+
+    def test_set_up(self):
+        """Ensure the test environment is correct."""
+        self.assertEqual(
+            self._store.get_estimator('JoeBloggs@example.com').tasks,
+            [task.Task(id='foo'), task.Task(id='bar')]
+        )
+
+    def test_rm_existing_task(self):
+        """Test task removal."""
+        self.run_command(['--id', 'foo'])
+        est = self._store.get_estimator('JoeBloggs@example.com')
+        self.assertEqual(len(est.tasks), 1)
+        self.assertEqual(est.tasks, [task.Task(id='bar')])
+
+    def test_rm_nonexistant_task(self):
+        """Test attempted removal of a nonexistant task."""
+        est = self._store.get_estimator('JoeBloggs@example.com')
+        before = list(est.tasks)
+        self.run_command(['--id', 'quux'])
+        del self._store.data  # purge data
+        after = list(est.tasks)
+        self.assertEqual(before, after)
