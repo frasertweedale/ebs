@@ -310,43 +310,54 @@ class Estimate(EBSCommand):
             estimators = self._store.estimators
 
         # get sliced futures for all estimators
-        projects = conf.get('core', 'projects').split(',')
-        futures = {
-            e: [(p, self._futures(e, p)) for p in projects]
-            for e in estimators
-        }
-
-        for e, ps in futures.viewitems():
-            acc = [0 for i in range(10)]
+        for e in estimators:
             print e.name
-            for project, estimates in ps:
-                print '  ' + project
-                acc = map(operator.add, acc, estimates)
-                future_dates = [
-                    _date.ship_date(
-                        hours=h, hours_per_day=hpd, start_date=today,
-                        events=list(e.get_events(start=tomorrow)),
-                        holidays=self._store.holidays
+            try:
+                cols = list(self._project_estimates(e))
+                for row in xrange(len(cols[0])):
+                    template = '{:{}}' * len(cols)
+                    vals = [col[row] for col in cols]
+                    widths = [max(len(x) for x in col) + 4 for col in cols]
+                    print template.format(
+                        *itertools.chain.from_iterable(zip(vals, widths))
                     )
-                    for h in acc
-                ]
-                try:
-                    for i in range(len(future_dates)):
-                        percent = (i + 1) * 100 / len(future_dates) - 1
-                        print '    {:2}% : {}'.format(
-                            percent,
-                            future_dates[i][0]
-                        )
-                except _estimator.NoHistoryError as exc:
-                    print '  ' + exc.message
-                    est = sum(t.estimate for t in e.pending_tasks())
-                    print '  sum of estimates    = {}h'.format(est)
-                    date = _date.ship_date(
-                        hours=est, hours_per_day=hpd, start_date=today,
-                        events=list(e.get_events(start=tomorrow)),
-                        holidays=self._store.holidays
-                    )[0]
-                    print '  estimated ship date = {}'.format(date)
+            except _estimator.NoHistoryError as exc:
+                print '  ' + exc.message
+                est = sum(t.estimate for t in e.pending_tasks())
+                print '  sum of estimates    = {}h'.format(est)
+                date = _date.ship_date(
+                    hours=est, hours_per_day=hpd, start_date=today,
+                    events=list(e.get_events(start=tomorrow)),
+                    holidays=self._store.holidays
+                )[0]
+                print '  estimated ship date = {}'.format(date)
+
+    def _project_estimates(self, estimator):
+        """Yield lists of strings showing outcomes with probabilities."""
+        hpd = float(conf.get('core', 'hours_per_day'))
+        today = datetime.date.today()
+        tomorrow = today + datetime.timedelta(days=1)
+        acc = [0 for i in range(10)]
+        projects = conf.get('core', 'projects').split(',')
+
+        for project in projects:
+            estimates = self._futures(estimator, project)
+            acc = map(operator.add, acc, estimates)
+            future_dates = [
+                _date.ship_date(
+                    hours=h, hours_per_day=hpd, start_date=today,
+                    events=list(estimator.get_events(start=tomorrow)),
+                    holidays=self._store.holidays
+                )
+                for h in acc
+            ]
+            yield ['  ' + project] + [
+                '    {:2}% : {}'.format(
+                    (i + 1) * 100 / len(future_dates) - 1,
+                    future_dates[i][0]
+                )
+                for i in range(len(future_dates))
+            ]
 
 
 class LsEvent(EBSCommand):
