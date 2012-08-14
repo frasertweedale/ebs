@@ -1,5 +1,6 @@
 # This file is part of ebs
-# Copyright (C) 2011 Benon Technologies Pty Ltd, Fraser Tweedale
+# Copyright (C) 2011 Benon Technologies Pty Ltd
+# Copyright (C) 2011, 2012 Fraser Tweedale
 #
 # ebs is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,44 +15,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import ConfigParser
-import os.path
 import re
 
-
-class ConfigError(Exception):
-    pass
+import clilib
 
 
-def check_section(section):
-    if section in ['core', 'alias', 'sync'] \
-            or re.match(r'server\.\w+', section):
-        return section
-    raise ConfigError('invalid section: {}'.format(section))
+class Config(clilib.Config):
+    """ebs configuration"""
 
+    @staticmethod
+    def check_section(section):
+        """Checks that the given section is valid.
 
-class Config(ConfigParser.SafeConfigParser):
-    _instances = {}
-
-    @classmethod
-    def get_config(cls, path):
-        path = os.path.expanduser(path)
-        if path not in cls._instances:
-            cls._instances[path] = cls(path)
-        return cls._instances[path]
-
-    def __init__(self, path):
-        path = os.path.expanduser(path)
-        ConfigParser.SafeConfigParser.__init__(self)
-        self._path = path
-        self.read(self._path)
-
-    def write(self):
-        with open(self._path, 'w') as fp:
-            ConfigParser.SafeConfigParser.write(self, fp)
-
-    def add_section(self, section):
-        ConfigParser.SafeConfigParser.add_section(self, check_section(section))
-
-
-NoSectionError = ConfigParser.NoSectionError
+        Return the given section if it is valid, otherwise raise
+        ``UserWarning``.
+        """
+        if section in ['core', 'alias', 'sync'] \
+                or re.match(r'server\.\w+', section):
+            return section
+        raise UserWarning('invalid section: {}'.format(section))

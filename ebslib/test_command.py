@@ -1,5 +1,6 @@
 # This file is part of ebs
 # Copyright (C) 2012 Benon Technologies Pty Ltd
+# Copyright (C) 2012 Fraser Tweedale
 #
 # ebs is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
+import ConfigParser
 import datetime
 import os
 import re
@@ -33,6 +35,9 @@ class CommandTestCase(unittest.TestCase):
         os.close(fd)
         self._tmp = path
         self._store = store.Store(path)
+        self._config = ConfigParser.SafeConfigParser()
+        self._config.add_section('core')
+        self._config.set('core', 'hours_per_day', '7.5')
 
     def tearDown(self):
         del self._store
@@ -45,7 +50,10 @@ class CommandTestCase(unittest.TestCase):
         subparsers = parser.add_subparsers()
         self._command.add_parser(subparsers)
         args = parser.parse_args([name, '--store', self._tmp] + args)
-        return args.command(args, parser, {name: self._command}, [])()
+        return args.command(
+            args, parser, {name: self._command}, [],
+            config=self._config
+        )()
 
 
 class AddEstimatorTestCase(CommandTestCase):

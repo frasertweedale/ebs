@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 # ebs - Evidence based scheduling program
-# Copyright (C) 2011, 2012 Benon Technologies Pty Ltd, Fraser Tweedale
+# Copyright (C) 2011, 2012 Fraser Tweedale
+# Copyright (C) 2011, 2012 Benon Technologies Pty Ltd
 #
 # ebs is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,61 +17,31 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import clilib
 
-import argparse
-
+import ebslib
 import ebslib.command
 import ebslib.config
 
-# retrieve user-defined aliases
-conf = ebslib.config.Config.get_config('~/.ebsrc')
-if conf.has_section('alias'):
-    aliases = dict(conf.items('alias'))
-else:
-    aliases = {}
+# retrieve config object
+config = ebslib.config.Config.get_config('~/.ebsrc')
 
-# format the epilogue
-epilog = None
-lines = map(
-    lambda (alias, target): "    {:20}{}".format(alias, target),
-    aliases.viewitems()
+# create global arguments
+global_args = [
+    (['--version'],
+    dict(action='version', version='%(prog)s {}'.format(ebslib.version))),
+]
+
+# create dispatcher
+dispatcher = clilib.Dispatcher(
+    global_args=global_args,
+    with_config=True,
+    config=config,
 )
-epilog = 'user-defined aliases:\n' + '\n'.join(lines) if lines else None
 
-# create an argument parser
-_parser = argparse.ArgumentParser(add_help=False)
+# add commands
+for command in ebslib.command.commands:
+    dispatcher.add_command(command)
 
-# add global arguments
-_parser.add_argument('--version', action='version',
-    version='%(prog)s {}'.format(ebslib.version))
-
-# parse known args
-args, argv = _parser.parse_known_args()
-
-# add subcommands
-parser = argparse.ArgumentParser(
-    parents=[_parser],
-    description='Perform evidence based scheduling.',
-    epilog=epilog,
-    formatter_class=argparse.RawDescriptionHelpFormatter
-)
-subparsers = parser.add_subparsers(title='subcommands')
-commands = {x.__name__.lower(): x for x in ebslib.command.commands}
-for name in sorted(commands):
-    commands[name].add_parser(subparsers)
-
-# process user-defined aliases
-for i, arg in enumerate(argv):
-    if arg in aliases:
-        # an alias; replace and stop processing
-        argv[i:i+1] = aliases[arg].split()
-        break
-    if arg in commands:
-        # a valid command; stop processing
-        break
-
-# parse remaining args
-args = parser.parse_args(args=argv, namespace=args)
-
-# execute command
-args.command(args, parser, commands, aliases)()
+# run
+dispatcher.dispatch()

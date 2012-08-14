@@ -22,7 +22,8 @@ import functools
 import itertools
 import operator
 import re
-import textwrap
+
+import clilib
 
 from . import config as _config
 from . import task as _task
@@ -36,8 +37,6 @@ try:
 except ImportError:
     pass
 
-conf = _config.Config.get_config('~/.ebsrc')
-
 
 def date(s):
     match = re.match(r'(\d{4})-(\d\d)-(\d\d)$', s)
@@ -49,126 +48,8 @@ def date(s):
         raise argparse.ArgumentTypeError(e.message)
 
 
-class Command(object):
-    """A command object.
-
-    Provides arguments.  Does what it does using __call__.
-    """
-
-    args = []
-    """
-    An array of (args, kwargs) tuples that will be used as arguments to
-    ArgumentParser.add_argument().
-    """
-
-    @classmethod
-    def add_parser(cls, subparsers):
-        """Add a subparser for this command to a subparsers object."""
-        name = cls.__name__.lower()
-        parser = subparsers.add_parser(name,
-            help=cls.help(), epilog=cls.epilog(),
-            formatter_class=argparse.RawDescriptionHelpFormatter)
-        for arg in cls.args:
-            if callable(arg):
-                arg(parser)
-            else:
-                parser.add_argument(*arg[0], **arg[1])
-        parser.set_defaults(command=cls)
-
-    @classmethod
-    def help(cls):
-        return textwrap.dedent(filter(None, cls.__doc__.splitlines())[0])
-
-    @classmethod
-    def epilog(cls):
-        return textwrap.dedent('\n\n'.join(cls.__doc__.split('\n\n')[1:]))
-
-    def __init__(self, args, parser, commands, aliases):
-        """
-        args: an argparse.Namespace
-        parser: the argparse.ArgumentParser
-        commands: a dict of all Command classes keyed by __name__.lower()
-        aliases: a dict of aliases keyed by alias
-        """
-        self._args = args
-        self._parser = parser
-        self._commands = commands
-        self._aliases = aliases
-
-
-class Config(Command):
-    """Show or update configuration."""
-    args = Command.args + [
-        lambda x: x.add_argument('--list', '-l', action='store_true',
-            help='list all configuration options'),
-        lambda x: x.add_argument('name', nargs='?',
-            help='name of option to show, set or remove'),
-        lambda x: x.add_argument('--remove', action='store_true',
-            help='remove the specified option'),
-        lambda x: x.add_argument('value', nargs='?',
-            help='set value of given option'),
-    ]
-
-    def __call__(self):
-        args = self._args
-        if args.list:
-            for section in conf.sections():
-                for option, value in conf.items(section):
-                    print '{}={}'.format('.'.join((section, option)), value)
-        elif not args.name:
-            raise UserWarning('No configuration option given.')
-        else:
-            try:
-                section, option = args.name.rsplit('.', 1)
-            except ValueError:
-                raise UserWarning('Invalid configuration option.')
-            if not section or not option:
-                raise UserWarning('Invalid configuration option.')
-
-            if args.remove:
-                # remove the option
-                conf.remove_option(section, option)
-                if not conf.items(section):
-                    conf.remove_section(section)
-                conf.write()
-            elif args.value:
-                # set new value
-                if not conf.has_section(section):
-                    conf.add_section(section)
-                oldvalue = conf.get(section, option) \
-                    if conf.has_option(section, option) else None
-                conf.set(section, option, args.value)
-                conf.write()
-                print '{}: {} => {}'.format(args.name, oldvalue, args.value)
-            else:
-                curvalue = conf.get(section, option)
-                print '{}: {}'.format(args.name, curvalue)
-
-
-class Help(Command):
-    """Show help."""
-    args = Command.args + [
-        lambda x: x.add_argument('subcommand', metavar='SUBCOMMAND', nargs='?',
-            help='show help for subcommand')
-    ]
-
-    def __call__(self):
-        if not self._args.subcommand:
-            self._parser.parse_args(['--help'])
-        else:
-            if self._args.subcommand in self._aliases:
-                print "'{}': alias for {}".format(
-                    self._args.subcommand,
-                    self._aliases[self._args.subcommand]
-                )
-            elif self._args.subcommand not in self._commands:
-                print "unknown subcommand: '{}'".format(self._args.subcommand)
-            else:
-                self._parser.parse_args([self._args.subcommand, '--help'])
-
-
-class EBSCommand(Command):
-    args = Command.args + [
+class EBSCommand(clilib.Command):
+    args = clilib.Command.args + [
         lambda x: x.add_argument('--store', default='~/.ebs',
             help='Path to datastore'),
     ]
@@ -209,7 +90,7 @@ class AddEvent(EBSCommand):
     _attrs = ('date', 'cost', 'description')
 
     def _run(self):
-        hpd = float(conf.get('core', 'hours_per_day'))
+        hpd = float(self._config.get('core', 'hours_per_day'))
         if self._args.cost > hpd:
             raise UserWarning('Event cannot have cost greater than one day.')
         self._store.assert_estimator_exist(self._args.estimator)
@@ -296,7 +177,7 @@ class Estimate(EBSCommand):
 
     def _run(self):
         self.exp = self._args.exponent if self._args.exponent >= 2 else 2
-        hpd = float(conf.get('core', 'hours_per_day'))
+        hpd = float(self._config.get('core', 'hours_per_day'))
         today = datetime.date.today()
         tomorrow = today + datetime.timedelta(days=1)
         # maximum estimate age
@@ -334,11 +215,11 @@ class Estimate(EBSCommand):
 
     def _project_estimates(self, estimator):
         """Yield lists of strings showing outcomes with probabilities."""
-        hpd = float(conf.get('core', 'hours_per_day'))
+        hpd = float(self._config.get('core', 'hours_per_day'))
         today = datetime.date.today()
         tomorrow = today + datetime.timedelta(days=1)
         acc = [0 for i in range(10)]
-        projects = conf.get('core', 'projects').split(',')
+        projects = self._config.get('core', 'projects').split(',')
 
         for project in projects:
             estimates = self._futures(estimator, project)
@@ -558,7 +439,7 @@ class Sync(EBSCommand):
         return d
 
     def _run(self):
-        projects = conf.get('core', 'projects').split(',')
+        projects = self._config.get('core', 'projects').split(',')
         bugs = set()  # accumulate bugs
         for project in projects:
             bugs |= self._sync_project(project)
@@ -579,7 +460,7 @@ class Sync(EBSCommand):
         for the given project.
         """
         self._project = project  # set project context
-        sync_conf = dict(conf.items('.'.join(['sync', project])))
+        sync_conf = dict(self._config.items('.'.join(['sync', project])))
         _search_args = self._parse_dict(sync_conf['search_args'])
 
         kwargs = {x: sync_conf[x] for x in ('url', 'user', 'password')}
@@ -648,9 +529,9 @@ class Sync(EBSCommand):
 
 
 # the list got too long; metaprogram it ^_^
-commands = filter(
-    lambda x: type(x) == type                # is a class \
-        and issubclass(x, Command)           # is a Command \
-        and x not in [Command, EBSCommand],  # not abstract
+commands = list(filter(
+    lambda x: type(x) == type          # is a class \
+        and issubclass(x, EBSCommand)  # is an EBSCommand \
+        and x is not EBSCommand,       # not abstract
     locals().viewvalues()
-)
+))
