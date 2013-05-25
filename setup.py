@@ -1,15 +1,14 @@
 import distutils.core
-import sys
 
 import ebslib  # import version info
 
-with open('README') as fh:
+with open('README.rst') as fh:
     long_description = fh.read()
 
 distutils.core.setup(
     name='ebs',
     version=ebslib.version,
-    description='Evidence Based Scheduling program',
+    description='evidence based scheduler',
     author='Fraser Tweedale',
     author_email='frase@frase.id.au',
     url='https://github.com/frasertweedale/ebs',
