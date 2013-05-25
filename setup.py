@@ -12,7 +12,7 @@ distutils.core.setup(
     description='Evidence Based Scheduling program',
     author='Fraser Tweedale',
     author_email='frase@frase.id.au',
-    url='https://gitorious.org/ebs',
+    url='https://github.com/frasertweedale/ebs',
     packages=['ebslib'],
     scripts=['scripts/ebs'],
     classifiers=[
