@@ -20,7 +20,15 @@ import unittest
 from . import date
 from . import task
 
+
 _today = datetime.date.today()
+
+
+def _next_work_date(work_days, date):
+    """Return the next work date on or after the given date."""
+    while date.weekday() not in work_days:
+        date = date + datetime.timedelta(days=1)
+    return date
 
 
 class DateTestCase(unittest.TestCase):
@@ -166,7 +174,7 @@ class DateTestCase(unittest.TestCase):
                 hours_per_day=1,
                 start_date=_today
             ),
-            (_today, 0)
+            (_next_work_date(work_days, _today), 0)
         )
 
     def test_ship_date_with_negative_hours(self):
@@ -179,7 +187,7 @@ class DateTestCase(unittest.TestCase):
                     hours_per_day=1,
                     start_date=_today
                 ),
-                (_today, 0)
+                (_next_work_date(work_days, _today), 0)
             )
 
     def test_ship_date_with_events(self):
